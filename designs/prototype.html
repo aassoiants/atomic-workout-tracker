@@ -1320,10 +1320,10 @@
 
         <div class="input-row">
           <span class="set-num" id="next-set-num">5</span>
-          <input class="input-field has-value" type="text" value="225">
+          <input class="input-field has-value" type="text" id="set-weight-input" value="225">
           <span class="input-multiply">&times;</span>
-          <input class="input-field" type="text" value="" placeholder="&#8212;">
-          <button class="log-set-btn">Log</button>
+          <input class="input-field" type="text" id="set-reps-input" value="" placeholder="&#8212;">
+          <button class="log-set-btn" id="log-set-btn">Log</button>
         </div>
 
         <button class="add-set-btn">
@@ -1464,6 +1464,7 @@
       '#ex-note-toggle': 'Toggle note',
       '.done-btn': 'Done → Session',
       '#ex-tags': 'Exercise tags',
+      '#log-set-btn': 'Log set',
       '.more-dots[data-goto]': 'Per-rep detail',
     },
     'screen-detail': {
@@ -1547,6 +1548,43 @@
       e.stopPropagation();
       tag.classList.toggle('active');
     });
+  });
+
+  // ── Log New Set (Exercise Screen) ──
+  document.getElementById('log-set-btn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const weightInput = document.getElementById('set-weight-input');
+    const repsInput = document.getElementById('set-reps-input');
+    const weight = weightInput.value.trim() || '—';
+    const reps = repsInput.value.trim() || '—';
+
+    const tbody = document.getElementById('set-rows');
+    const dataRows = [...tbody.querySelectorAll('tr:not(.drop-row)')];
+    const setNum = dataRows.length + 1;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="set-num-cell">${setNum}</td>
+      <td>${weight}</td>
+      <td>${reps}</td>
+      <td><span class="more-dots">&#8943;</span></td>
+      <td><span class="set-delete">&#8722;</span></td>
+    `;
+
+    // Flash green on add
+    tr.style.animation = 'repFlash 0.5s ease-out';
+
+    tbody.appendChild(tr);
+    attachSetDeleteHandler(tr);
+
+    // Update next set number and clear reps input
+    document.getElementById('next-set-num').textContent = setNum + 1;
+    repsInput.value = '';
+    repsInput.classList.remove('has-value');
+
+    // Scroll to bottom
+    const scroll = document.querySelector('#screen-exercise .screen-scroll');
+    setTimeout(() => { scroll.scrollTop = scroll.scrollHeight; }, 50);
   });
 
   // ── Set Deletion (Exercise Screen) ──

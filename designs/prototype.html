@@ -586,7 +586,18 @@
     width: 42px;
   }
 
-  .set-table thead th:last-child { width: 32px; }
+  .set-table thead th:nth-child(4) { width: 32px; }
+  .set-table thead th:last-child { width: 28px; }
+
+  .set-delete {
+    color: var(--text-tertiary);
+    font-size: 16px;
+    cursor: pointer;
+    transition: color 0.15s;
+    user-select: none;
+  }
+
+  .set-delete:hover { color: #FF5252; }
 
   .set-table tbody tr {
     border-bottom: 1px solid rgba(42,42,51,0.5);
@@ -1252,44 +1263,50 @@
               <th>Lbs</th>
               <th>Reps</th>
               <th></th>
+              <th></th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="set-rows">
             <tr>
-              <td>1</td>
+              <td class="set-num-cell">1</td>
               <td>135</td>
               <td>5</td>
               <td><span class="more-dots">&#8943;</span></td>
+              <td><span class="set-delete">&#8722;</span></td>
             </tr>
             <tr>
-              <td>2</td>
+              <td class="set-num-cell">2</td>
               <td>225</td>
               <td>8</td>
               <td><span class="more-dots">&#8943;</span></td>
+              <td><span class="set-delete">&#8722;</span></td>
             </tr>
             <tr>
-              <td>3</td>
+              <td class="set-num-cell">3</td>
               <td>225</td>
               <td>8</td>
               <td><span class="more-dots">&#8943;</span></td>
+              <td><span class="set-delete">&#8722;</span></td>
             </tr>
             <tr class="has-detail">
-              <td>4</td>
+              <td class="set-num-cell">4</td>
               <td>225</td>
               <td>8</td>
               <td><span class="more-dots" data-goto="screen-detail">&#8943;</span></td>
+              <td><span class="set-delete">&#8722;</span></td>
             </tr>
             <tr class="drop-row">
               <td></td>
               <td><span class="drop-weight">185</span></td>
               <td><span class="drop-reps">4</span></td>
               <td></td>
+              <td></td>
             </tr>
           </tbody>
         </table>
 
         <div class="input-row">
-          <span class="set-num">5</span>
+          <span class="set-num" id="next-set-num">5</span>
           <input class="input-field has-value" type="text" value="225">
           <span class="input-multiply">&times;</span>
           <input class="input-field" type="text" value="" placeholder="&#8212;">
@@ -1500,6 +1517,45 @@
   overlay.addEventListener('click', () => {
     hideHotspots();
   });
+
+  // ── Set Deletion (Exercise Screen) ──
+  function attachSetDeleteHandler(row) {
+    const del = row.querySelector('.set-delete');
+    if (!del) return;
+    del.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteSet(row);
+    });
+  }
+
+  document.querySelectorAll('#set-rows tr:not(.drop-row)').forEach(attachSetDeleteHandler);
+
+  function deleteSet(row) {
+    const tbody = document.getElementById('set-rows');
+    const dataRows = [...tbody.querySelectorAll('tr:not(.drop-row)')];
+    if (dataRows.length <= 1) return; // keep at least 1 set
+
+    // If this row has a drop-row sibling right after it, remove that too
+    const next = row.nextElementSibling;
+    if (next && next.classList.contains('drop-row')) {
+      next.remove();
+    }
+    row.remove();
+
+    // Re-number remaining sets
+    reindexSets();
+  }
+
+  function reindexSets() {
+    const tbody = document.getElementById('set-rows');
+    const dataRows = [...tbody.querySelectorAll('tr:not(.drop-row)')];
+    dataRows.forEach((row, i) => {
+      const numCell = row.querySelector('.set-num-cell');
+      if (numCell) numCell.textContent = i + 1;
+    });
+    const nextSetNum = document.getElementById('next-set-num');
+    if (nextSetNum) nextSetNum.textContent = dataRows.length + 1;
+  }
 
   // ── Per-Rep Detail: Flag Popovers ──
   const repState = [

@@ -925,6 +925,18 @@
     color: var(--text-secondary);
     font-size: 14px;
     cursor: pointer;
+    transition: color 0.15s;
+  }
+
+  .rep-more:hover { color: var(--volt); }
+
+  @keyframes repFlash {
+    0% { background: var(--volt-dim); }
+    100% { background: transparent; }
+  }
+
+  .rep-row.just-added {
+    animation: repFlash 0.5s ease-out;
   }
 
   /* ── Flag Popover ── */
@@ -1300,7 +1312,7 @@
         <button class="done-btn" data-goto="screen-exercise">Done</button>
       </div>
 
-      <div class="rep-content">
+      <div class="rep-content" id="rep-content">
         <div class="rep-table-header">
           <span>Rep</span>
           <span>Lbs</span>
@@ -1308,34 +1320,26 @@
           <span></span>
         </div>
 
-        <div class="rep-row"><span class="rep-num">1</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
-        <div class="rep-row"><span class="rep-num">2</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
-        <div class="rep-row"><span class="rep-num">3</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
-        <div class="rep-row"><span class="rep-num">4</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
-        <div class="rep-row"><span class="rep-num">5</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
-        <div class="rep-row"><span class="rep-num">6</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
-        <div class="rep-row"><span class="rep-num">7</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
-        <div class="rep-row"><span class="rep-num">8</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
+        <div id="rep-rows">
+          <div class="rep-row" data-idx="0"><span class="rep-num">1</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
+          <div class="rep-row" data-idx="1"><span class="rep-num">2</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
+          <div class="rep-row" data-idx="2"><span class="rep-num">3</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
+          <div class="rep-row" data-idx="3"><span class="rep-num">4</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
+          <div class="rep-row" data-idx="4"><span class="rep-num">5</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
+          <div class="rep-row" data-idx="5"><span class="rep-num">6</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
+          <div class="rep-row" data-idx="6"><span class="rep-num">7</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
+          <div class="rep-row" data-idx="7"><span class="rep-num">8</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
+          <div class="rep-row weight-changed" data-idx="8"><span class="rep-num">9</span><div class="rep-weight-cell"><span class="rep-weight changed">185</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
+          <div class="rep-row weight-changed" data-idx="9"><span class="rep-num">10</span><div class="rep-weight-cell"><span class="rep-weight changed">185</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
+          <div class="rep-row weight-changed" data-idx="10"><span class="rep-num">11</span><div class="rep-weight-cell"><span class="rep-weight changed">185</span></div><div class="rep-flags"><span class="rep-flag assisted">Assisted</span></div><div class="rep-more">&#8943;</div></div>
+          <div class="rep-row weight-changed" data-idx="11"><span class="rep-num">12</span><div class="rep-weight-cell"><span class="rep-weight changed">185</span></div><div class="rep-flags"><span class="rep-flag partial">Partial</span><span class="rep-flag failure">Failure</span></div><div class="rep-more">&#8943;</div></div>
+        </div>
 
-        <div class="rep-row weight-changed"><span class="rep-num">9</span><div class="rep-weight-cell"><span class="rep-weight changed">185</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
-        <div class="rep-row weight-changed"><span class="rep-num">10</span><div class="rep-weight-cell"><span class="rep-weight changed">185</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
-        <div class="rep-row weight-changed"><span class="rep-num">11</span><div class="rep-weight-cell"><span class="rep-weight changed">185</span></div><div class="rep-flags"><span class="rep-flag assisted">Assisted</span></div><div class="rep-more">&#8943;</div></div>
-
-        <div class="rep-row weight-changed popover-anchor">
-          <span class="rep-num">12</span>
-          <div class="rep-weight-cell"><span class="rep-weight changed">185</span></div>
-          <div class="rep-flags">
-            <span class="rep-flag partial">Partial</span>
-            <span class="rep-flag failure">Failure</span>
-          </div>
-          <div class="rep-more">&#8943;</div>
-
-          <div class="flag-popover">
-            <div class="popover-item active"><span class="pi-icon">&#10040;</span> Assisted</div>
-            <div class="popover-divider"></div>
-            <div class="popover-item active"><span class="pi-icon">&#9673;</span> Partial</div>
-            <div class="popover-item active"><span class="pi-icon">&#9888;</span> Failure</div>
-          </div>
+        <div class="input-row">
+          <span class="set-num" id="next-rep-num">13</span>
+          <input class="input-field has-value" type="text" id="rep-weight-input" value="185">
+          <span class="input-multiply">lbs</span>
+          <button class="log-set-btn" id="log-rep-btn">Log</button>
         </div>
       </div>
     </div>
@@ -1418,6 +1422,8 @@
     },
     'screen-detail': {
       '.detail-back': 'Back',
+      '.rep-more': 'Toggle flags',
+      '#log-rep-btn': 'Add rep',
       '.done-btn': 'Done',
     }
   };
@@ -1480,6 +1486,169 @@
 
   overlay.addEventListener('click', () => {
     hideHotspots();
+  });
+
+  // ── Per-Rep Detail: Flag Popovers ──
+  const repState = [
+    { weight: 225, flags: [] },
+    { weight: 225, flags: [] },
+    { weight: 225, flags: [] },
+    { weight: 225, flags: [] },
+    { weight: 225, flags: [] },
+    { weight: 225, flags: [] },
+    { weight: 225, flags: [] },
+    { weight: 225, flags: [] },
+    { weight: 185, flags: [] },
+    { weight: 185, flags: [] },
+    { weight: 185, flags: ['assisted'] },
+    { weight: 185, flags: ['partial', 'failure'] },
+  ];
+  const MAIN_WEIGHT = 225;
+  let activePopoverIdx = -1;
+
+  // Attach click handlers to all existing ⋯ buttons
+  document.querySelectorAll('#rep-rows .rep-row').forEach((row) => {
+    const idx = parseInt(row.dataset.idx);
+    row.querySelector('.rep-more').addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePopover(row, idx);
+    });
+  });
+
+  function togglePopover(row, idx) {
+    if (activePopoverIdx === idx) { closePopover(); return; }
+    closePopover();
+    openPopover(row, idx);
+  }
+
+  function openPopover(row, idx) {
+    const rep = repState[idx];
+    const popover = document.createElement('div');
+    popover.className = 'flag-popover';
+    popover.id = 'active-popover';
+    popover.innerHTML = `
+      <div class="popover-item${rep.flags.includes('assisted') ? ' active' : ''}" data-flag="assisted">
+        <span class="pi-icon">&#10040;</span> Assisted
+      </div>
+      <div class="popover-divider"></div>
+      <div class="popover-item${rep.flags.includes('partial') ? ' active' : ''}" data-flag="partial">
+        <span class="pi-icon">&#9673;</span> Partial
+      </div>
+      <div class="popover-item${rep.flags.includes('failure') ? ' active' : ''}" data-flag="failure">
+        <span class="pi-icon">&#9888;</span> Failure
+      </div>
+    `;
+    popover.addEventListener('click', e => e.stopPropagation());
+
+    // Toggle flags on click
+    popover.querySelectorAll('.popover-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const flag = item.dataset.flag;
+        const fi = rep.flags.indexOf(flag);
+        if (fi === -1) rep.flags.push(flag); else rep.flags.splice(fi, 1);
+        item.classList.toggle('active');
+        renderFlags(row, rep);
+      });
+    });
+
+    // Position: show above row if in bottom half of scroll
+    const scrollEl = document.querySelector('#screen-detail .screen-scroll');
+    const rowRect = row.getBoundingClientRect();
+    const scrollRect = scrollEl.getBoundingClientRect();
+    if ((rowRect.top - scrollRect.top) > scrollRect.height * 0.55) {
+      popover.style.top = 'auto';
+      popover.style.bottom = '100%';
+      popover.style.marginTop = '0';
+      popover.style.marginBottom = '4px';
+    }
+
+    row.appendChild(popover);
+    activePopoverIdx = idx;
+  }
+
+  function closePopover() {
+    const el = document.getElementById('active-popover');
+    if (el) el.remove();
+    activePopoverIdx = -1;
+  }
+
+  function renderFlags(row, rep) {
+    const container = row.querySelector('.rep-flags');
+    const names = { assisted: 'Assisted', partial: 'Partial', failure: 'Failure' };
+    container.innerHTML = rep.flags.map(f =>
+      `<span class="rep-flag ${f}">${names[f]}</span>`
+    ).join('');
+  }
+
+  // Close popover on any outside click
+  document.addEventListener('click', () => closePopover());
+
+  // ── Per-Rep Detail: Add New Rep ──
+  document.getElementById('log-rep-btn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const input = document.getElementById('rep-weight-input');
+    const weight = parseInt(input.value) || MAIN_WEIGHT;
+    const newIdx = repState.length;
+    const repNum = newIdx + 1;
+
+    repState.push({ weight, flags: [] });
+
+    const newRow = document.createElement('div');
+    newRow.className = 'rep-row just-added' + (weight !== MAIN_WEIGHT ? ' weight-changed' : '');
+    newRow.dataset.idx = newIdx;
+    newRow.innerHTML = `
+      <span class="rep-num">${repNum}</span>
+      <div class="rep-weight-cell"><span class="rep-weight${weight !== MAIN_WEIGHT ? ' changed' : ''}">${weight}</span></div>
+      <div class="rep-flags"></div>
+      <div class="rep-more">&#8943;</div>
+    `;
+
+    newRow.querySelector('.rep-more').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      togglePopover(newRow, newIdx);
+    });
+
+    document.getElementById('rep-rows').appendChild(newRow);
+
+    // Advance input
+    document.getElementById('next-rep-num').textContent = repNum + 1;
+    input.value = weight;
+
+    // Update title
+    updateDetailTitle();
+
+    // Scroll to new row
+    const scroll = document.querySelector('#screen-detail .screen-scroll');
+    setTimeout(() => { scroll.scrollTop = scroll.scrollHeight; }, 50);
+  });
+
+  function updateDetailTitle() {
+    document.querySelector('.detail-title').innerHTML =
+      `Set 4 &middot; <span class="rep-count">${repState.length} Reps</span>`;
+  }
+
+  // ── Done Button: Update Exercise Screen ──
+  document.querySelector('.done-btn')?.addEventListener('click', () => {
+    const mainReps = repState.filter(r => r.weight === MAIN_WEIGHT).length;
+    const dropReps = repState.filter(r => r.weight !== MAIN_WEIGHT);
+
+    // Update set 4 reps in exercise table
+    const set4Row = document.querySelector('.has-detail');
+    if (set4Row) {
+      const tds = set4Row.querySelectorAll('td');
+      if (tds[2]) tds[2].textContent = mainReps;
+    }
+
+    // Update drop row
+    const dropRow = document.querySelector('.drop-row');
+    if (dropRow && dropReps.length > 0) {
+      const lastWeight = dropReps[dropReps.length - 1].weight;
+      dropRow.querySelector('.drop-weight').textContent = lastWeight;
+      dropRow.querySelector('.drop-reps').textContent = dropReps.length;
+      dropRow.style.display = '';
+    } else if (dropRow && dropReps.length === 0) {
+      dropRow.style.display = 'none';
+    }
   });
 
   // Auto-show on first load so people know it exists

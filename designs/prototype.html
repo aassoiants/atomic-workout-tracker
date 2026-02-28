@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WODIS — Interactive Prototype</title>
+<title>Atomic — Interactive Prototype</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -975,6 +975,62 @@
     margin: 4px 0;
   }
 
+  /* ── Hotspot Reveal ── */
+  [data-goto].hotspot-reveal,
+  #session-note-toggle.hotspot-reveal,
+  #ex-note-toggle.hotspot-reveal {
+    outline: 2px solid var(--volt);
+    outline-offset: 3px;
+    box-shadow: 0 0 16px var(--volt-glow), inset 0 0 12px var(--volt-dim);
+    border-radius: 8px;
+    animation: hotspotPulse 1.2s ease-out forwards;
+  }
+
+  /* Tighter outline for small inline elements */
+  .more-dots.hotspot-reveal {
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  @keyframes hotspotPulse {
+    0% { outline-color: var(--volt); box-shadow: 0 0 16px var(--volt-glow), inset 0 0 12px var(--volt-dim); }
+    60% { outline-color: var(--volt); box-shadow: 0 0 16px var(--volt-glow), inset 0 0 12px var(--volt-dim); }
+    100% { outline-color: transparent; box-shadow: 0 0 0px transparent, inset 0 0 0px transparent; }
+  }
+
+  /* ── Hint badge ── */
+  .hint-badge {
+    position: absolute;
+    top: 46px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--bg);
+    background: var(--volt);
+    padding: 5px 14px;
+    border-radius: 20px;
+    z-index: 20;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+    white-space: nowrap;
+  }
+
+  .hint-badge.visible {
+    opacity: 1;
+    animation: hintFade 2.5s ease forwards;
+  }
+
+  @keyframes hintFade {
+    0% { opacity: 0; transform: translateX(-50%) translateY(4px); }
+    10% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    70% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
   /* ── Screen transition hint ── */
   .hint {
     position: fixed;
@@ -992,13 +1048,14 @@
 <body>
 
 <div class="phone">
+  <div class="hint-badge" id="hint-badge">Tap to reveal hotspots</div>
 
   <!-- ═══ SCREEN: HOME ═══ -->
   <div class="screen active" id="screen-home">
     <div class="screen-scroll">
       <div class="home-header header-ambient">
-        <div class="home-logo">W<span>O</span>DIS</div>
-        <div class="home-subtitle">Your training, your data</div>
+        <div class="home-logo">AT<span>O</span>MIC</div>
+        <div class="home-subtitle">The rep is the atomic unit</div>
       </div>
 
       <button class="log-new-btn" data-goto="screen-session">
@@ -1269,22 +1326,21 @@
 
 </div>
 
-<div class="hint">Click highlighted elements to navigate</div>
+<div class="hint">Tap anywhere to reveal clickable areas</div>
 
 <script>
-  // Screen navigation
+  // ── Screen navigation ──
   document.querySelectorAll('[data-goto]').forEach(el => {
     el.addEventListener('click', (e) => {
       e.stopPropagation();
       const target = el.getAttribute('data-goto');
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById(target).classList.add('active');
-      // Scroll to top
       document.getElementById(target).querySelector('.screen-scroll')?.scrollTo(0, 0);
     });
   });
 
-  // Exercise note toggle
+  // ── Exercise note toggle ──
   const exNoteToggle = document.getElementById('ex-note-toggle');
   const exNoteArea = document.getElementById('ex-note-area');
   let noteVisible = true;
@@ -1294,13 +1350,12 @@
     exNoteArea.style.display = noteVisible ? 'block' : 'none';
   });
 
-  // Session note toggle
+  // ── Session note toggle ──
   const sessionNoteToggle = document.getElementById('session-note-toggle');
   let sessionNoteExpanded = false;
 
   sessionNoteToggle?.addEventListener('click', () => {
     sessionNoteExpanded = !sessionNoteExpanded;
-    const textEl = sessionNoteToggle.querySelector('.session-note-text');
     if (sessionNoteExpanded) {
       sessionNoteToggle.innerHTML = `
         <span class="session-note-icon">&#9998;</span>
@@ -1311,6 +1366,60 @@
       `;
       sessionNoteToggle.style.borderColor = 'rgba(202,255,51,0.2)';
     }
+  });
+
+  // ── Hotspot Reveal System ──
+  const phone = document.querySelector('.phone');
+  const hintBadge = document.getElementById('hint-badge');
+  let revealTimeout = null;
+
+  function revealHotspots() {
+    // Get current active screen
+    const activeScreen = document.querySelector('.screen.active');
+    if (!activeScreen) return;
+
+    // Find all clickable elements in the active screen
+    const clickables = activeScreen.querySelectorAll('[data-goto], #session-note-toggle, #ex-note-toggle');
+
+    // Clear previous reveals
+    document.querySelectorAll('.hotspot-reveal').forEach(el => el.classList.remove('hotspot-reveal'));
+    clearTimeout(revealTimeout);
+
+    // Add reveal class
+    clickables.forEach(el => {
+      // Only reveal elements that are visible
+      if (el.offsetParent !== null || el.closest('.screen.active')) {
+        el.classList.add('hotspot-reveal');
+      }
+    });
+
+    // Show hint badge
+    hintBadge.classList.remove('visible');
+    void hintBadge.offsetWidth; // force reflow for re-trigger
+    hintBadge.classList.add('visible');
+
+    // Remove after animation
+    revealTimeout = setTimeout(() => {
+      document.querySelectorAll('.hotspot-reveal').forEach(el => el.classList.remove('hotspot-reveal'));
+    }, 1400);
+  }
+
+  // Reveal on click anywhere on the phone (but not on clickable elements)
+  phone.addEventListener('click', (e) => {
+    // Don't trigger if they clicked a [data-goto] or interactive element
+    if (e.target.closest('[data-goto]') || e.target.closest('#session-note-toggle') || e.target.closest('#ex-note-toggle')) return;
+    revealHotspots();
+  });
+
+  // Auto-reveal on first load after a short delay
+  setTimeout(revealHotspots, 800);
+
+  // Re-reveal briefly after screen transitions
+  const origClickHandlers = document.querySelectorAll('[data-goto]');
+  origClickHandlers.forEach(el => {
+    el.addEventListener('click', () => {
+      setTimeout(revealHotspots, 400);
+    });
   });
 </script>
 

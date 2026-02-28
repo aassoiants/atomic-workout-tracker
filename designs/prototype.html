@@ -746,6 +746,12 @@
   /* ── Tags ── */
   .tags { display: flex; gap: 8px; margin: 16px 0; flex-wrap: wrap; }
 
+  .tag.active {
+    background: rgba(202,255,51,0.2);
+    border-color: var(--volt);
+    box-shadow: 0 0 10px var(--volt-dim);
+  }
+
   .tag {
     padding: 6px 14px;
     border: 1px solid rgba(202,255,51,0.35);
@@ -1371,6 +1377,12 @@
           <span class="input-multiply">lbs</span>
           <button class="log-set-btn" id="log-rep-btn">Log</button>
         </div>
+
+        <div class="tags" id="rep-tags">
+          <span class="tag" data-flag="assisted">Assisted</span>
+          <span class="tag" data-flag="partial">Partial</span>
+          <span class="tag" data-flag="failure">Failure</span>
+        </div>
       </div>
     </div>
 
@@ -1674,6 +1686,28 @@
   // Close popover on any outside click
   document.addEventListener('click', () => closePopover());
 
+  // ── Rep Tag Selection ──
+  const selectedRepFlags = new Set();
+
+  document.querySelectorAll('#rep-tags .tag').forEach(tag => {
+    tag.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const flag = tag.dataset.flag;
+      if (selectedRepFlags.has(flag)) {
+        selectedRepFlags.delete(flag);
+        tag.classList.remove('active');
+      } else {
+        selectedRepFlags.add(flag);
+        tag.classList.add('active');
+      }
+    });
+  });
+
+  function resetRepTags() {
+    selectedRepFlags.clear();
+    document.querySelectorAll('#rep-tags .tag').forEach(t => t.classList.remove('active'));
+  }
+
   // ── Per-Rep Detail: Add New Rep ──
   document.getElementById('log-rep-btn')?.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -1682,15 +1716,19 @@
     const newIdx = repState.length;
     const repNum = newIdx + 1;
 
-    repState.push({ weight, flags: [] });
+    const flags = [...selectedRepFlags];
+    repState.push({ weight, flags });
 
     const newRow = document.createElement('div');
     newRow.className = 'rep-row just-added' + (weight !== MAIN_WEIGHT ? ' weight-changed' : '');
     newRow.dataset.idx = newIdx;
+    const flagNames = { assisted: 'Assisted', partial: 'Partial', failure: 'Failure' };
+    const flagsHtml = flags.map(f => `<span class="rep-flag ${f}">${flagNames[f]}</span>`).join('');
+
     newRow.innerHTML = `
       <span class="rep-num">${repNum}</span>
       <div class="rep-weight-cell"><span class="rep-weight${weight !== MAIN_WEIGHT ? ' changed' : ''}">${weight}</span></div>
-      <div class="rep-flags"></div>
+      <div class="rep-flags">${flagsHtml}</div>
       <div class="rep-more">&#8943;</div>
       <div class="rep-delete">&#8722;</div>
     `;
@@ -1699,9 +1737,10 @@
 
     document.getElementById('rep-rows').appendChild(newRow);
 
-    // Advance input
+    // Advance input and reset tags
     document.getElementById('next-rep-num').textContent = repNum + 1;
     input.value = weight;
+    resetRepTags();
 
     // Update title
     updateDetailTitle();

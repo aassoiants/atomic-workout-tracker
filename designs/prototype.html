@@ -1294,7 +1294,7 @@
         <span>+</span> Add Exercise
       </button>
 
-      <button class="finish-btn">
+      <button class="finish-btn" id="finish-session-btn">
         Finish Session
       </button>
     </div>
@@ -1542,6 +1542,7 @@
       '.session-back': 'Back',
       '#session-note-toggle': 'Session note',
       '.exercise-card': 'Open exercise',
+      '#finish-session-btn': 'Finish session',
     },
     'screen-exercise': {
       '.ex-back': 'Back',
@@ -1991,6 +1992,66 @@
       insertAfter.after(tr);
       insertAfter = tr;
     });
+  });
+
+  // ── Finish Session: create card on home feed ──
+  document.getElementById('finish-session-btn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+
+    // Gather data from exercise card and set table
+    const exerciseName = document.querySelector('.ec-name')?.textContent || 'Exercise';
+    const tbody = document.getElementById('set-rows');
+    const allRows = [...tbody.querySelectorAll('tr')];
+
+    let totalSets = 0;
+    let totalTonnage = 0;
+
+    allRows.forEach(row => {
+      if (row.classList.contains('drop-row')) {
+        const w = parseInt(row.querySelector('.drop-weight')?.textContent) || 0;
+        const r = parseInt(row.querySelector('.drop-reps')?.textContent) || 0;
+        totalTonnage += w * r;
+      } else {
+        totalSets++;
+        const tds = row.querySelectorAll('td');
+        const w = parseInt(tds[1]?.textContent) || 0;
+        const r = parseInt(tds[2]?.textContent) || 0;
+        totalTonnage += w * r;
+      }
+    });
+
+    // Format tonnage with commas
+    const tonnageStr = totalTonnage.toLocaleString();
+
+    // Get timer value
+    const duration = document.querySelector('.session-timer')?.textContent || '—';
+
+    // Build new session card
+    const card = document.createElement('div');
+    card.className = 'session-card';
+    card.style.animation = 'repFlash 0.6s ease-out';
+    card.innerHTML = `
+      <div class="sc-top">
+        <span class="sc-date">Today &middot; New Session</span>
+        <span class="sc-duration">${duration}</span>
+      </div>
+      <div class="sc-exercises">${exerciseName}</div>
+      <div class="sc-bottom">
+        <span class="sc-stat"><strong>${tonnageStr}</strong> lbs</span>
+        <span class="sc-stat"><strong>${totalSets}</strong> sets</span>
+      </div>
+    `;
+
+    // Insert at top of feed (after the feed label)
+    const feedLabel = document.querySelector('.feed-label');
+    if (feedLabel && feedLabel.nextElementSibling) {
+      feedLabel.after(card);
+    }
+
+    // Navigate to home
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-home').classList.add('active');
+    document.querySelector('#screen-home .screen-scroll')?.scrollTo(0, 0);
   });
 
 </script>

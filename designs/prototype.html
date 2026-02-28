@@ -380,6 +380,20 @@
     font-weight: 400;
   }
 
+  .ec-sets-summary {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+  }
+
+  .ec-drop {
+    color: var(--cyan);
+    font-weight: 600;
+    text-shadow: 0 0 4px var(--cyan-glow);
+  }
+
   .ec-suggestion {
     font-size: 11px;
     color: var(--cyan);
@@ -1270,9 +1284,9 @@
       <div class="exercise-card" data-goto="screen-exercise">
         <div class="ec-top">
           <span class="ec-name">Bench Press</span>
-          <span class="ec-sets-count">4 sets</span>
+          <span class="ec-sets-count" id="ec-sets-count">4 sets &middot; 1 drop</span>
         </div>
-        <div class="ec-last">Last: 225 &times; 8, 8, 8, 6 &middot; Feb 25</div>
+        <div class="ec-sets-summary" id="ec-set-summary">135&times;5, 225&times;8, 225&times;8, 225&times;8 <span class="ec-drop">&#8627;185&times;4</span></div>
         <div class="ec-suggestion">&#9889; Suggested: 225 lbs &middot; fatigue ~15%</div>
       </div>
 
@@ -1612,11 +1626,57 @@
     hideHotspots();
   });
 
+  // ── Update exercise card with compressed set summary ──
+  function updateExerciseCard() {
+    const tbody = document.getElementById('set-rows');
+    const rows = [...tbody.querySelectorAll('tr')];
+
+    let sets = 0;
+    let drops = 0;
+    const parts = [];
+
+    rows.forEach(row => {
+      if (row.classList.contains('drop-row')) {
+        drops++;
+        const w = row.querySelector('.drop-weight')?.textContent;
+        const r = row.querySelector('.drop-reps')?.textContent;
+        if (w && r && parts.length > 0) {
+          parts[parts.length - 1] += ` <span class="ec-drop">↳${w}×${r}</span>`;
+        }
+      } else {
+        sets++;
+        const tds = row.querySelectorAll('td');
+        const w = tds[1]?.textContent?.trim();
+        const r = tds[2]?.textContent?.trim();
+        if (w && r) parts.push(`${w}×${r}`);
+      }
+    });
+
+    const countEl = document.getElementById('ec-sets-count');
+    const summaryEl = document.getElementById('ec-set-summary');
+
+    if (countEl) {
+      let label = `${sets} set${sets !== 1 ? 's' : ''}`;
+      if (drops > 0) label += ` · ${drops} drop${drops !== 1 ? 's' : ''}`;
+      countEl.textContent = label;
+    }
+
+    if (summaryEl) {
+      summaryEl.innerHTML = parts.join(', ');
+    }
+  }
+
   // ── Exercise Done button (added dynamically, needs its own listener) ──
   document.querySelector('#screen-exercise .done-btn')?.addEventListener('click', (e) => {
     e.stopPropagation();
+    updateExerciseCard();
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById('screen-session').classList.add('active');
+  });
+
+  // ── Exercise back arrow also updates card ──
+  document.querySelector('.ex-back')?.addEventListener('click', () => {
+    updateExerciseCard();
   });
 
   // ── Exercise-level tag toggles (AMRAP / Backoff) ──

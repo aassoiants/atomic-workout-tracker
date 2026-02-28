@@ -1758,25 +1758,45 @@
   // ── Done Button: Update Exercise Screen ──
   document.querySelector('.done-btn')?.addEventListener('click', () => {
     const mainReps = repState.filter(r => r.weight === MAIN_WEIGHT).length;
-    const dropReps = repState.filter(r => r.weight !== MAIN_WEIGHT);
 
-    // Update set 4 reps in exercise table
-    const set4Row = document.querySelector('.has-detail');
-    if (set4Row) {
-      const tds = set4Row.querySelectorAll('td');
+    // Update main set reps
+    const detailRow = document.querySelector('.has-detail');
+    if (detailRow) {
+      const tds = detailRow.querySelectorAll('td');
       if (tds[2]) tds[2].textContent = mainReps;
     }
 
-    // Update drop row
-    const dropRow = document.querySelector('.drop-row');
-    if (dropRow && dropReps.length > 0) {
-      const lastWeight = dropReps[dropReps.length - 1].weight;
-      dropRow.querySelector('.drop-weight').textContent = lastWeight;
-      dropRow.querySelector('.drop-reps').textContent = dropReps.length;
-      dropRow.style.display = '';
-    } else if (dropRow && dropReps.length === 0) {
-      dropRow.style.display = 'none';
-    }
+    // Remove all old drop rows
+    document.querySelectorAll('#set-rows .drop-row').forEach(r => r.remove());
+
+    // Group non-main reps by weight (preserve order of first appearance)
+    const weightOrder = [];
+    const weightCounts = {};
+    repState.forEach(r => {
+      if (r.weight !== MAIN_WEIGHT) {
+        if (!weightCounts[r.weight]) {
+          weightCounts[r.weight] = 0;
+          weightOrder.push(r.weight);
+        }
+        weightCounts[r.weight]++;
+      }
+    });
+
+    // Create a drop row for each weight group
+    let insertAfter = detailRow;
+    weightOrder.forEach(weight => {
+      const tr = document.createElement('tr');
+      tr.className = 'drop-row';
+      tr.innerHTML = `
+        <td></td>
+        <td><span class="drop-weight">${weight}</span></td>
+        <td><span class="drop-reps">${weightCounts[weight]}</span></td>
+        <td></td>
+        <td></td>
+      `;
+      insertAfter.after(tr);
+      insertAfter = tr;
+    });
   });
 
   // Auto-show on first load so people know it exists

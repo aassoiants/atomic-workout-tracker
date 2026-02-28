@@ -990,7 +990,7 @@
     font-size: 16px;
     font-weight: 800;
     cursor: pointer;
-    z-index: 20;
+    z-index: 200;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1015,7 +1015,7 @@
     position: absolute;
     inset: 0;
     background: rgba(0,0,0,0.6);
-    z-index: 15;
+    z-index: 150;
     pointer-events: auto;
     cursor: pointer;
   }
@@ -1065,7 +1065,7 @@
     padding: 6px 16px;
     border-radius: 20px;
     border: 1px solid rgba(202,255,51,0.3);
-    z-index: 16;
+    z-index: 160;
     white-space: nowrap;
   }
 </style>
@@ -1073,8 +1073,6 @@
 <body>
 
 <div class="phone">
-  <button class="help-fab" id="help-fab" title="Show clickable areas">?</button>
-  <div class="hotspot-overlay" id="hotspot-overlay"></div>
 
   <!-- ═══ SCREEN: HOME ═══ -->
   <div class="screen active" id="screen-home">
@@ -1350,6 +1348,9 @@
     </div>
   </div>
 
+  <!-- Hotspot system — MUST be after all screens for z-index layering -->
+  <div class="hotspot-overlay" id="hotspot-overlay"></div>
+  <button class="help-fab" id="help-fab" title="Show clickable areas">?</button>
 </div>
 
 <div class="hint">Press ? to see what's clickable</div>

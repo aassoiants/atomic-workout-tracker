@@ -1109,6 +1109,20 @@
     z-index: 160;
     white-space: nowrap;
   }
+
+  /* ── Mobile-friendly: fill viewport on small screens ── */
+  @media (max-width: 430px) {
+    body { padding: 0; }
+    .phone {
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      border-radius: 0;
+      border: none;
+      box-shadow: none;
+    }
+    .phone::before { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -1401,7 +1415,6 @@
   <button class="help-fab" id="help-fab" title="Show clickable areas">?</button>
 </div>
 
-<div class="hint">Press ? to see what's clickable</div>
 
 <script>
   // ── Screen navigation ──

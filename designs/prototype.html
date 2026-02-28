@@ -1270,7 +1270,10 @@
         <div class="session-header-top">
           <span class="session-back" data-goto="screen-home">&#8592;</span>
           <span class="session-title">New Session</span>
-          <span class="session-timer">12:34</span>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span class="session-timer">12:34</span>
+            <button class="done-btn" id="session-done-btn">Done</button>
+          </div>
         </div>
       </div>
 
@@ -1540,6 +1543,7 @@
     },
     'screen-session': {
       '.session-back': 'Back',
+      '#session-done-btn': 'Done → Home',
       '#session-note-toggle': 'Session note',
       '.exercise-card': 'Open exercise',
       '#finish-session-btn': 'Finish session',
@@ -1995,9 +1999,7 @@
   });
 
   // ── Finish Session: create card on home feed ──
-  document.getElementById('finish-session-btn')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-
+  function finishSession() {
     // Gather data from exercise card and set table
     const exerciseName = document.querySelector('.ec-name')?.textContent || 'Exercise';
     const tbody = document.getElementById('set-rows');
@@ -2044,14 +2046,22 @@
 
     // Insert at top of feed (after the feed label)
     const feedLabel = document.querySelector('.feed-label');
-    if (feedLabel && feedLabel.nextElementSibling) {
-      feedLabel.after(card);
-    }
+    if (feedLabel) feedLabel.after(card);
 
     // Navigate to home
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById('screen-home').classList.add('active');
     document.querySelector('#screen-home .screen-scroll')?.scrollTo(0, 0);
+  }
+
+  document.getElementById('finish-session-btn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    finishSession();
+  });
+
+  document.getElementById('session-done-btn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    finishSession();
   });
 
 </script>

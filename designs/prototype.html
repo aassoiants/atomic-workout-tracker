@@ -1110,6 +1110,70 @@
     white-space: nowrap;
   }
 
+  /* ── Onboarding Overlay ── */
+  .onboarding-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.82);
+    z-index: 250;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 32px;
+    cursor: pointer;
+  }
+
+  .onboarding-content {
+    text-align: center;
+    max-width: 280px;
+  }
+
+  .onboarding-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--volt);
+    color: var(--bg);
+    font-family: 'Outfit', sans-serif;
+    font-size: 24px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    box-shadow: 0 0 32px var(--volt-glow), 0 4px 16px rgba(0,0,0,0.4);
+    animation: fabPulse 3s ease-in-out infinite;
+  }
+
+  .onboarding-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  .onboarding-text strong {
+    color: var(--volt);
+    font-weight: 700;
+  }
+
+  .onboarding-dismiss {
+    padding: 10px 28px;
+    background: var(--volt);
+    color: var(--bg);
+    border: none;
+    border-radius: 20px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 0 16px var(--volt-dim);
+  }
+
   /* ── Mobile-friendly: fill viewport on small screens ── */
   @media (max-width: 430px) {
     body { padding: 0; }
@@ -1413,6 +1477,17 @@
   <!-- Hotspot system — MUST be after all screens for z-index layering -->
   <div class="hotspot-overlay" id="hotspot-overlay"></div>
   <button class="help-fab" id="help-fab" title="Show clickable areas">?</button>
+
+  <!-- Onboarding overlay — shown on first load -->
+  <div class="onboarding-overlay" id="onboarding-overlay">
+    <div class="onboarding-content">
+      <div class="onboarding-icon">?</div>
+      <div class="onboarding-text">
+        Tap the <strong>?</strong> button on every screen to see which parts of this prototype you can interact with.
+      </div>
+      <button class="onboarding-dismiss" id="onboarding-dismiss">Got it</button>
+    </div>
+  </div>
 </div>
 
 
@@ -1872,11 +1947,17 @@
     });
   });
 
-  // Auto-show on first load so people know it exists
-  setTimeout(() => {
+  // ── Onboarding: dismiss then show hotspots ──
+  document.getElementById('onboarding-dismiss')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('onboarding-overlay').remove();
     showHotspots();
-    setTimeout(hideHotspots, 2500);
-  }, 600);
+  });
+  document.getElementById('onboarding-overlay')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('onboarding-overlay').remove();
+    showHotspots();
+  });
 </script>
 
 </body>

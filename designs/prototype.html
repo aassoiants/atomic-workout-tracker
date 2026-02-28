@@ -2044,6 +2044,13 @@
       </div>
     `;
 
+    // Tap card to go back to session screen
+    card.style.cursor = 'pointer';
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById('screen-session').classList.add('active');
+    });
+
     // Insert at top of feed (after the feed label)
     const feedLabel = document.querySelector('.feed-label');
     if (feedLabel) feedLabel.after(card);

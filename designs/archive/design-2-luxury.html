@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WODIS — Luxury Minimal Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet">
+<style>
+  /* ── Reset & Base ─────────────────────────────── */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-deep:    #0E0E10;
+    --bg-card:    #1A1A1F;
+    --bg-elevated:#222228;
+    --border:     #2E2E34;
+    --border-faint:#242429;
+    --text-primary:   #E8E8ED;
+    --text-secondary: #6E6E73;
+    --text-tertiary:  #4A4A50;
+    --accent-gold:    #C9A96E;
+    --accent-gold-dim:#C9A96E33;
+    --tag-border:     #3A3A40;
+    --success-subtle: #C9A96E;
+    --popover-shadow: 0 8px 32px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3);
+    --radius: 8px;
+    --radius-sm: 6px;
+    --font-serif: 'Cormorant Garamond', 'Georgia', serif;
+    --font-sans:  'DM Sans', -apple-system, 'Helvetica Neue', sans-serif;
+  }
+
+  body {
+    background: #080809;
+    font-family: var(--font-sans);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 40px 20px;
+    gap: 32px;
+  }
+
+  /* ── Screen Container ─────────────────────────── */
+  .screen {
+    width: 390px;
+    min-width: 390px;
+    background: var(--bg-deep);
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid var(--border-faint);
+    position: relative;
+  }
+
+  .screen-label {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    text-align: center;
+    padding: 16px 0 0;
+    position: absolute;
+    top: -32px;
+    left: 0;
+    right: 0;
+  }
+
+  /* ── Status Bar ───────────────────────────────── */
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 24px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    letter-spacing: 0.02em;
+  }
+  .status-bar .time { font-weight: 600; color: var(--text-primary); font-size: 13px; }
+  .status-icons { display: flex; gap: 6px; align-items: center; }
+  .status-icons svg { width: 14px; height: 14px; fill: var(--text-secondary); }
+
+  /* ── Nav / Back ───────────────────────────────── */
+  .nav-back {
+    padding: 4px 24px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    letter-spacing: 0.01em;
+  }
+  .nav-back svg { width: 16px; height: 16px; stroke: var(--text-secondary); fill: none; stroke-width: 1.5; }
+
+  /* ── Exercise Title ───────────────────────────── */
+  .exercise-title {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: 30px;
+    letter-spacing: 0.01em;
+    color: var(--text-primary);
+    padding: 20px 28px 4px;
+    line-height: 1.15;
+  }
+
+  /* ── Tabs ──────────────────────────────────────── */
+  .tabs {
+    display: flex;
+    gap: 0;
+    padding: 16px 28px 0;
+  }
+  .tab {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.03em;
+    color: var(--text-tertiary);
+    padding: 8px 0;
+    margin-right: 28px;
+    border-bottom: 1.5px solid transparent;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .tab.active {
+    color: var(--accent-gold);
+    border-bottom-color: var(--accent-gold);
+    font-weight: 500;
+  }
+
+  /* ── Suggestion Line ──────────────────────────── */
+  .suggestion {
+    padding: 16px 28px 0;
+    font-size: 12px;
+    color: var(--text-tertiary);
+    letter-spacing: 0.02em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .suggestion .dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--text-tertiary);
+    display: inline-block;
+  }
+
+  /* ── Set Table ────────────────────────────────── */
+  .set-table {
+    padding: 20px 16px 0;
+  }
+
+  .set-header {
+    display: grid;
+    grid-template-columns: 44px 1fr 1fr 40px 36px;
+    padding: 0 12px 10px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+  .set-header .col-check,
+  .set-header .col-detail { text-align: center; }
+
+  .set-row {
+    display: grid;
+    grid-template-columns: 44px 1fr 1fr 40px 36px;
+    align-items: center;
+    padding: 14px 12px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 2px;
+    transition: background 0.15s;
+  }
+  .set-row:hover { background: #15151A; }
+
+  .set-row.completed { }
+
+  .set-num {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .set-val {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+  .set-val .unit {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-tertiary);
+    margin-left: 2px;
+  }
+
+  /* ── Check Circle ─────────────────────────────── */
+  .check-circle {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    transition: border-color 0.2s;
+  }
+  .check-circle.done {
+    border-color: var(--accent-gold);
+  }
+  .check-circle.done svg {
+    stroke: var(--accent-gold);
+  }
+  .check-circle svg {
+    width: 11px;
+    height: 11px;
+    fill: none;
+    stroke: transparent;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* ── Detail Dots ──────────────────────────────── */
+  .detail-dots {
+    text-align: center;
+    font-size: 16px;
+    letter-spacing: 2px;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: color 0.2s;
+    line-height: 1;
+  }
+  .detail-dots:hover { color: var(--text-secondary); }
+
+  /* ── Divider ──────────────────────────────────── */
+  .divider {
+    height: 1px;
+    background: var(--border-faint);
+    margin: 8px 28px;
+  }
+
+  /* ── Current Set Input ────────────────────────── */
+  .current-set {
+    display: grid;
+    grid-template-columns: 44px 1fr 1fr 40px 36px;
+    align-items: center;
+    padding: 14px 12px;
+    margin: 0 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  .input-field {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    width: 60px;
+    padding: 2px 0;
+    outline: none;
+    transition: border-color 0.2s;
+    letter-spacing: -0.01em;
+  }
+  .input-field:focus { border-bottom-color: var(--accent-gold); }
+  .input-field::placeholder {
+    color: var(--text-tertiary);
+    font-weight: 400;
+  }
+  .input-field .unit {
+    font-size: 11px;
+    color: var(--text-tertiary);
+  }
+
+  /* ── Tags ──────────────────────────────────────── */
+  .tags-row {
+    display: flex;
+    gap: 8px;
+    padding: 16px 28px 0;
+  }
+  .tag {
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    text-transform: lowercase;
+    color: var(--text-tertiary);
+    border: 1px solid var(--tag-border);
+    border-radius: 20px;
+    padding: 5px 14px;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .tag:hover {
+    color: var(--text-secondary);
+    border-color: var(--text-tertiary);
+  }
+
+  /* ── Add Set Button ───────────────────────────── */
+  .add-set {
+    padding: 20px 28px 28px;
+  }
+  .add-set-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 12px;
+    background: transparent;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    color: var(--text-tertiary);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .add-set-btn:hover {
+    border-color: var(--text-tertiary);
+    color: var(--text-secondary);
+  }
+  .add-set-btn svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.5;
+  }
+
+  /* ── Bottom Nav ───────────────────────────────── */
+  .bottom-nav {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 12px 0 20px;
+    border-top: 1px solid var(--border-faint);
+    margin-top: 4px;
+  }
+  .bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: var(--text-tertiary);
+    letter-spacing: 0.04em;
+  }
+  .bottom-nav-item.active { color: var(--accent-gold); }
+  .bottom-nav-item svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.5;
+  }
+
+  /* ══════════════════════════════════════════════════
+     SCREEN 2 — Per-Rep Detail
+     ══════════════════════════════════════════════════ */
+
+  .rep-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 28px 0;
+  }
+  .rep-header-title {
+    font-family: var(--font-serif);
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--text-primary);
+    letter-spacing: 0.01em;
+  }
+  .rep-header-title .sep {
+    color: var(--text-tertiary);
+    margin: 0 4px;
+    font-weight: 300;
+  }
+  .done-btn {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent-gold);
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    padding: 6px 16px;
+    border-radius: var(--radius-sm);
+    transition: background 0.15s;
+  }
+  .done-btn:hover { background: var(--accent-gold-dim); }
+
+  /* ── Rep List ──────────────────────────────────── */
+  .rep-list {
+    padding: 16px 16px 0;
+  }
+
+  .rep-row {
+    display: grid;
+    grid-template-columns: 36px 1fr 36px;
+    align-items: center;
+    padding: 13px 12px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 1px;
+    transition: background 0.15s;
+  }
+  .rep-row:hover { background: #15151A; }
+
+  .rep-num {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rep-weight {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .rep-weight .unit {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-tertiary);
+  }
+
+  /* ── Flags ─────────────────────────────────────── */
+  .flag {
+    display: inline-flex;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 4px;
+    line-height: 1;
+  }
+  .flag-assisted {
+    color: #8B8B93;
+    background: #28282E;
+  }
+  .flag-partial {
+    color: #A08A5B;
+    background: #C9A96E18;
+  }
+  .flag-failure {
+    color: #9B6B6B;
+    background: #9B6B6B18;
+  }
+
+  .rep-dots {
+    text-align: center;
+    font-size: 14px;
+    letter-spacing: 1.5px;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .rep-dots:hover { color: var(--text-secondary); }
+
+  /* ── Drop-set Divider ─────────────────────────── */
+  .dropset-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 24px;
+    margin: 4px 0;
+  }
+  .dropset-divider::before,
+  .dropset-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-faint);
+  }
+  .dropset-label {
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+  }
+
+  /* ── Flag Popover ─────────────────────────────── */
+  .popover-anchor { position: relative; }
+
+  .flag-popover {
+    position: absolute;
+    top: -8px;
+    right: 40px;
+    width: 160px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--popover-shadow);
+    z-index: 100;
+    overflow: hidden;
+  }
+  .popover-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 16px;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+  }
+  .popover-item:hover {
+    background: #2A2A30;
+    color: var(--text-primary);
+  }
+  .popover-item + .popover-item {
+    border-top: 1px solid var(--border-faint);
+  }
+  .popover-item svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.5;
+    flex-shrink: 0;
+  }
+
+  /* ── Scroll area for rep list ──────────────────── */
+  .rep-scroll {
+    max-height: 520px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .rep-scroll::-webkit-scrollbar { width: 3px; }
+  .rep-scroll::-webkit-scrollbar-track { background: transparent; }
+  .rep-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── Responsive wrap ──────────────────────────── */
+  @media (max-width: 850px) {
+    body {
+      flex-direction: column;
+      align-items: center;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════════
+     SCREEN 1 — Exercise Logging (New tab)
+     ════════════════════════════════════════════════════════════════ -->
+<div class="screen" style="margin-top: 36px;">
+  <div class="screen-label">Exercise Logging</div>
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span class="time">9:41</span>
+    <div class="status-icons">
+      <svg viewBox="0 0 16 16"><path d="M1 10l3-8h1l3 8M2.5 7h4" stroke="currentColor" fill="none" stroke-width="1.2"/></svg>
+      <svg viewBox="0 0 16 16"><rect x="1" y="4" width="3" height="10" rx="0.5" fill="currentColor" opacity="0.35"/><rect x="5" y="3" width="3" height="11" rx="0.5" fill="currentColor" opacity="0.5"/><rect x="9" y="1.5" width="3" height="12.5" rx="0.5" fill="currentColor" opacity="0.7"/><rect x="13" y="0" width="3" height="14" rx="0.5" fill="currentColor"/></svg>
+      <svg viewBox="0 0 20 12"><rect x="0.5" y="0.5" width="17" height="11" rx="2" stroke="currentColor" stroke-width="1" fill="none"/><rect x="18" y="3.5" width="2" height="5" rx="0.5" fill="currentColor" opacity="0.5"/><rect x="2" y="2" width="11" height="8" rx="1" fill="currentColor"/></svg>
+    </div>
+  </div>
+
+  <!-- Nav Back -->
+  <div class="nav-back">
+    <svg viewBox="0 0 16 16"><polyline points="10,3 5,8 10,13"/></svg>
+    <span>Exercises</span>
+  </div>
+
+  <!-- Exercise Title -->
+  <div class="exercise-title">Bench Press</div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active">New</div>
+    <div class="tab">History</div>
+    <div class="tab">Graph</div>
+  </div>
+
+  <!-- Suggestion -->
+  <div class="suggestion">
+    Suggested: 225 lbs <span class="dot"></span> fatigue ~15%
+  </div>
+
+  <!-- Set Table -->
+  <div class="set-table">
+    <!-- Header -->
+    <div class="set-header">
+      <span>Set</span>
+      <span>Lbs</span>
+      <span>Reps</span>
+      <span class="col-check">&check;</span>
+      <span class="col-detail"></span>
+    </div>
+
+    <!-- Set 1 -->
+    <div class="set-row completed">
+      <span class="set-num">1</span>
+      <span class="set-val">135</span>
+      <span class="set-val">5</span>
+      <span>
+        <div class="check-circle done">
+          <svg viewBox="0 0 12 12"><polyline points="2.5,6.5 5,9 9.5,3.5"/></svg>
+        </div>
+      </span>
+      <span class="detail-dots">&middot;&middot;&middot;</span>
+    </div>
+
+    <!-- Set 2 -->
+    <div class="set-row completed">
+      <span class="set-num">2</span>
+      <span class="set-val">225</span>
+      <span class="set-val">8</span>
+      <span>
+        <div class="check-circle done">
+          <svg viewBox="0 0 12 12"><polyline points="2.5,6.5 5,9 9.5,3.5"/></svg>
+        </div>
+      </span>
+      <span class="detail-dots">&middot;&middot;&middot;</span>
+    </div>
+
+    <!-- Set 3 -->
+    <div class="set-row completed">
+      <span class="set-num">3</span>
+      <span class="set-val">225</span>
+      <span class="set-val">8</span>
+      <span>
+        <div class="check-circle done">
+          <svg viewBox="0 0 12 12"><polyline points="2.5,6.5 5,9 9.5,3.5"/></svg>
+        </div>
+      </span>
+      <span class="detail-dots">&middot;&middot;&middot;</span>
+    </div>
+
+    <!-- Set 4 (has per-rep data) -->
+    <div class="set-row completed">
+      <span class="set-num">4</span>
+      <span class="set-val">225</span>
+      <span class="set-val">12</span>
+      <span>
+        <div class="check-circle done">
+          <svg viewBox="0 0 12 12"><polyline points="2.5,6.5 5,9 9.5,3.5"/></svg>
+        </div>
+      </span>
+      <span class="detail-dots" style="color: var(--text-secondary);">&middot;&middot;&middot;</span>
+    </div>
+  </div>
+
+  <!-- Divider -->
+  <div class="divider"></div>
+
+  <!-- Current Set Input -->
+  <div class="current-set">
+    <span class="set-num" style="color: var(--text-tertiary);">5</span>
+    <span>
+      <input class="input-field" type="text" value="225" style="width: 52px;">
+    </span>
+    <span>
+      <input class="input-field" type="text" placeholder="reps" style="width: 52px;">
+    </span>
+    <span>
+      <div class="check-circle">
+        <svg viewBox="0 0 12 12"><polyline points="2.5,6.5 5,9 9.5,3.5"/></svg>
+      </div>
+    </span>
+    <span></span>
+  </div>
+
+  <!-- Tags -->
+  <div class="tags-row">
+    <div class="tag">amrap</div>
+    <div class="tag">backoff</div>
+  </div>
+
+  <!-- Add Set -->
+  <div class="add-set">
+    <button class="add-set-btn">
+      <svg viewBox="0 0 14 14"><line x1="7" y1="2" x2="7" y2="12"/><line x1="2" y1="7" x2="12" y2="7"/></svg>
+      Add Set
+    </button>
+  </div>
+
+  <!-- Bottom Nav -->
+  <div class="bottom-nav">
+    <div class="bottom-nav-item">
+      <svg viewBox="0 0 22 22"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="12" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="12" width="7" height="7" rx="1.5"/><rect x="12" y="12" width="7" height="7" rx="1.5"/></svg>
+      <span>Today</span>
+    </div>
+    <div class="bottom-nav-item active">
+      <svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="8"/><line x1="11" y1="7" x2="11" y2="11"/><line x1="11" y1="11" x2="14" y2="13"/></svg>
+      <span>Log</span>
+    </div>
+    <div class="bottom-nav-item">
+      <svg viewBox="0 0 22 22"><polyline points="3,16 8,8 13,12 19,4"/></svg>
+      <span>Progress</span>
+    </div>
+    <div class="bottom-nav-item">
+      <svg viewBox="0 0 22 22"><circle cx="11" cy="7" r="4"/><path d="M4 19c0-3.87 3.13-7 7-7s7 3.13 7 7"/></svg>
+      <span>Profile</span>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════════
+     SCREEN 2 — Per-Rep Detail (Set 4)
+     ════════════════════════════════════════════════════════════════ -->
+<div class="screen" style="margin-top: 36px;">
+  <div class="screen-label">Per-Rep Detail</div>
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span class="time">9:41</span>
+    <div class="status-icons">
+      <svg viewBox="0 0 16 16"><path d="M1 10l3-8h1l3 8M2.5 7h4" stroke="currentColor" fill="none" stroke-width="1.2"/></svg>
+      <svg viewBox="0 0 16 16"><rect x="1" y="4" width="3" height="10" rx="0.5" fill="currentColor" opacity="0.35"/><rect x="5" y="3" width="3" height="11" rx="0.5" fill="currentColor" opacity="0.5"/><rect x="9" y="1.5" width="3" height="12.5" rx="0.5" fill="currentColor" opacity="0.7"/><rect x="13" y="0" width="3" height="14" rx="0.5" fill="currentColor"/></svg>
+      <svg viewBox="0 0 20 12"><rect x="0.5" y="0.5" width="17" height="11" rx="2" stroke="currentColor" stroke-width="1" fill="none"/><rect x="18" y="3.5" width="2" height="5" rx="0.5" fill="currentColor" opacity="0.5"/><rect x="2" y="2" width="11" height="8" rx="1" fill="currentColor"/></svg>
+    </div>
+  </div>
+
+  <!-- Nav Back -->
+  <div class="nav-back">
+    <svg viewBox="0 0 16 16"><polyline points="10,3 5,8 10,13"/></svg>
+    <span>Bench Press</span>
+  </div>
+
+  <!-- Rep Header -->
+  <div class="rep-header">
+    <div class="rep-header-title">Set 4<span class="sep">&middot;</span>12 reps</div>
+    <div class="done-btn">Done</div>
+  </div>
+
+  <!-- Divider -->
+  <div class="divider" style="margin-top: 14px;"></div>
+
+  <!-- Rep List -->
+  <div class="rep-scroll">
+    <div class="rep-list">
+
+      <!-- Rep 1 -->
+      <div class="rep-row">
+        <span class="rep-num">1</span>
+        <span class="rep-weight">225<span class="unit">lbs</span></span>
+        <span class="rep-dots">&middot;&middot;&middot;</span>
+      </div>
+
+      <!-- Rep 2 -->
+      <div class="rep-row">
+        <span class="rep-num">2</span>
+        <span class="rep-weight">225<span class="unit">lbs</span></span>
+        <span class="rep-dots">&middot;&middot;&middot;</span>
+      </div>
+
+      <!-- Rep 3 -->
+      <div class="rep-row">
+        <span class="rep-num">3</span>
+        <span class="rep-weight">225<span class="unit">lbs</span></span>
+        <span class="rep-dots">&middot;&middot;&middot;</span>
+      </div>
+
+      <!-- Rep 4 -->
+      <div class="rep-row">
+        <span class="rep-num">4</span>
+        <span class="rep-weight">225<span class="unit">lbs</span></span>
+        <span class="rep-dots">&middot;&middot;&middot;</span>
+      </div>
+
+      <!-- Rep 5 -->
+      <div class="rep-row">
+        <span class="rep-num">5</span>
+        <span class="rep-weight">225<span class="unit">lbs</span></span>
+        <span class="rep-dots">&middot;&middot;&middot;</span>
+      </div>
+
+      <!-- Rep 6 -->
+      <div class="rep-row">
+        <span class="rep-num">6</span>
+        <span class="rep-weight">225<span class="unit">lbs</span></span>
+        <span class="rep-dots">&middot;&middot;&middot;</span>
+      </div>
+
+      <!-- Rep 7 -->
+      <div class="rep-row">
+        <span class="rep-num">7</span>
+        <span class="rep-weight">225<span class="unit">lbs</span></span>
+        <span class="rep-dots">&middot;&middot;&middot;</span>
+      </div>
+
+      <!-- Rep 8 -->
+      <div class="rep-row">
+        <span class="rep-num">8</span>
+        <span class="rep-weight">225<span class="unit">lbs</span></span>
+        <span class="rep-dots">&middot;&middot;&middot;</span>
+      </div>
+
+      <!-- Dropset Divider -->
+      <div class="dropset-divider">
+        <span class="dropset-label">drop set</span>
+      </div>
+
+      <!-- Rep 9 — 185 lbs -->
+      <div class="rep-row">
+        <span class="rep-num">9</span>
+        <span class="rep-weight">185<span class="unit">lbs</span></span>
+        <span class="rep-dots">&middot;&middot;&middot;</span>
+      </div>
+
+      <!-- Rep 10 — 185 lbs -->
+      <div class="rep-row">
+        <span class="rep-num">10</span>
+        <span class="rep-weight">185<span class="unit">lbs</span></span>
+        <span class="rep-dots">&middot;&middot;&middot;</span>
+      </div>
+
+      <!-- Rep 11 — 185 lbs, assisted -->
+      <div class="rep-row">
+        <span class="rep-num">11</span>
+        <span class="rep-weight">
+          185<span class="unit">lbs</span>
+          <span class="flag flag-assisted">assisted</span>
+        </span>
+        <span class="rep-dots">&middot;&middot;&middot;</span>
+      </div>
+
+      <!-- Rep 12 — 185 lbs, partial + failure, with popover -->
+      <div class="rep-row popover-anchor">
+        <span class="rep-num">12</span>
+        <span class="rep-weight">
+          185<span class="unit">lbs</span>
+          <span class="flag flag-partial">partial</span>
+          <span class="flag flag-failure">failure</span>
+        </span>
+        <span class="rep-dots" style="color: var(--text-secondary);">&middot;&middot;&middot;</span>
+
+        <!-- Flag Popover -->
+        <div class="flag-popover">
+          <div class="popover-item">
+            <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/></svg>
+            Normal
+          </div>
+          <div class="popover-item" style="color: var(--text-primary);">
+            <svg viewBox="0 0 16 16"><path d="M8 3v6M8 12v1"/></svg>
+            Partial
+          </div>
+          <div class="popover-item" style="color: var(--text-primary);">
+            <svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+            Failure
+          </div>
+          <div class="popover-item">
+            <svg viewBox="0 0 16 16"><path d="M8 2v4M6 6h4M8 10v4"/></svg>
+            Assisted
+          </div>
+          <div class="popover-item">
+            <svg viewBox="0 0 16 16"><path d="M3 8h10M8 3v10"/></svg>
+            Forced
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Bottom padding -->
+  <div style="height: 28px;"></div>
+
+  <!-- Bottom Nav -->
+  <div class="bottom-nav">
+    <div class="bottom-nav-item">
+      <svg viewBox="0 0 22 22"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="12" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="12" width="7" height="7" rx="1.5"/><rect x="12" y="12" width="7" height="7" rx="1.5"/></svg>
+      <span>Today</span>
+    </div>
+    <div class="bottom-nav-item active">
+      <svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="8"/><line x1="11" y1="7" x2="11" y2="11"/><line x1="11" y1="11" x2="14" y2="13"/></svg>
+      <span>Log</span>
+    </div>
+    <div class="bottom-nav-item">
+      <svg viewBox="0 0 22 22"><polyline points="3,16 8,8 13,12 19,4"/></svg>
+      <span>Progress</span>
+    </div>
+    <div class="bottom-nav-item">
+      <svg viewBox="0 0 22 22"><circle cx="11" cy="7" r="4"/><path d="M4 19c0-3.87 3.13-7 7-7s7 3.13 7 7"/></svg>
+      <span>Profile</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

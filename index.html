@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atomic — Design Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0A0A0F;
+    --surface: #141419;
+    --surface-hover: #1A1A22;
+    --border: #2A2A33;
+    --text-primary: #F0F0F5;
+    --text-secondary: #7A7A85;
+    --text-tertiary: #4A4A52;
+    --volt: #CAFF33;
+    --volt-dim: rgba(202, 255, 51, 0.15);
+    --volt-glow: rgba(202, 255, 51, 0.4);
+    --cyan: #00E5FF;
+    --cyan-dim: rgba(0, 229, 255, 0.08);
+    --cyan-glow: rgba(0, 229, 255, 0.35);
+  }
+
+  body {
+    background: var(--bg);
+    font-family: 'Outfit', sans-serif;
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Ambient background ── */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background:
+      radial-gradient(ellipse at 20% 20%, rgba(202,255,51,0.03) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(0,229,255,0.02) 0%, transparent 50%);
+    animation: drift 20s ease-in-out infinite alternate;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  @keyframes drift {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    100% { transform: translate(-5%, -3%) rotate(2deg); }
+  }
+
+  /* ── Layout ── */
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Header ── */
+  .header {
+    padding: 80px 0 60px;
+    text-align: center;
+    position: relative;
+  }
+
+  .logo {
+    font-size: 48px;
+    font-weight: 900;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    position: relative;
+    display: inline-block;
+  }
+
+  .logo span {
+    background: linear-gradient(135deg, var(--volt), var(--cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .logo::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--volt), var(--cyan), transparent);
+    opacity: 0.4;
+  }
+
+  .tagline {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-top: 16px;
+  }
+
+  /* ── Main Actions ── */
+  .actions {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 64px;
+  }
+
+  .action-card {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 28px 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  .action-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .action-card:hover {
+    border-color: rgba(202,255,51,0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(202,255,51,0.1);
+  }
+
+  .action-card.primary::before {
+    background: linear-gradient(135deg, rgba(202,255,51,0.06), transparent 60%);
+  }
+
+  .action-card.primary:hover::before { opacity: 1; }
+
+  .action-card.secondary::before {
+    background: linear-gradient(135deg, rgba(0,229,255,0.04), transparent 60%);
+  }
+
+  .action-card.secondary:hover {
+    border-color: rgba(0,229,255,0.25);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,229,255,0.1);
+  }
+
+  .action-card.secondary:hover::before { opacity: 1; }
+
+  .action-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  .primary .action-icon {
+    background: var(--volt-dim);
+    box-shadow: 0 0 20px rgba(202,255,51,0.1);
+  }
+
+  .secondary .action-icon {
+    background: var(--cyan-dim);
+    box-shadow: 0 0 20px rgba(0,229,255,0.08);
+  }
+
+  .action-text {
+    position: relative;
+    z-index: 1;
+  }
+
+  .action-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  .action-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  .action-arrow {
+    margin-left: auto;
+    font-size: 20px;
+    color: var(--text-tertiary);
+    transition: all 0.3s;
+    position: relative;
+    z-index: 1;
+  }
+
+  .action-card:hover .action-arrow {
+    color: var(--volt);
+    transform: translateX(4px);
+  }
+
+  .action-card.secondary:hover .action-arrow {
+    color: var(--cyan);
+  }
+
+  /* ── Archive Section ── */
+  .archive-section {
+    display: none;
+    padding-bottom: 80px;
+  }
+
+  .archive-section.visible {
+    display: block;
+    animation: fadeIn 0.4s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  .section-close {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: all 0.2s;
+  }
+
+  .section-close:hover {
+    color: var(--text-primary);
+    background: rgba(255,255,255,0.05);
+  }
+
+  /* ── Timeline ── */
+  .timeline {
+    position: relative;
+    padding-left: 32px;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 8px;
+    bottom: 8px;
+    width: 1px;
+    background: linear-gradient(to bottom, var(--cyan), var(--border) 30%, var(--border) 70%, transparent);
+  }
+
+  .timeline-item {
+    position: relative;
+    margin-bottom: 24px;
+    animation: fadeIn 0.4s ease backwards;
+  }
+
+  .timeline-item:nth-child(1) { animation-delay: 0.05s; }
+  .timeline-item:nth-child(2) { animation-delay: 0.1s; }
+  .timeline-item:nth-child(3) { animation-delay: 0.15s; }
+  .timeline-item:nth-child(4) { animation-delay: 0.2s; }
+  .timeline-item:nth-child(5) { animation-delay: 0.25s; }
+
+  .timeline-dot {
+    position: absolute;
+    left: -29px;
+    top: 20px;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 2px solid var(--border);
+    z-index: 1;
+  }
+
+  .timeline-item:first-child .timeline-dot {
+    border-color: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan-glow);
+  }
+
+  .timeline-card {
+    display: block;
+    padding: 20px 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .timeline-card:hover {
+    border-color: rgba(0,229,255,0.2);
+    background: var(--surface-hover);
+    transform: translateX(4px);
+  }
+
+  .timeline-date {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .timeline-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+  }
+
+  .timeline-desc {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .timeline-tag {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .tag-chosen {
+    background: var(--volt-dim);
+    color: var(--volt);
+    border: 1px solid rgba(202,255,51,0.2);
+  }
+
+  .tag-explored {
+    background: rgba(255,255,255,0.04);
+    color: var(--text-secondary);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
+    padding: 40px 0 60px;
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+  }
+
+  .footer-text {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    letter-spacing: 1px;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 520px) {
+    .header { padding: 60px 0 40px; }
+    .logo { font-size: 36px; letter-spacing: 6px; }
+    .action-card { padding: 20px 20px; gap: 16px; }
+    .action-icon { width: 48px; height: 48px; font-size: 20px; }
+    .action-title { font-size: 16px; }
+    .timeline { padding-left: 28px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <div class="logo"><span>Atomic</span></div>
+    <div class="tagline">Design Lab</div>
+  </div>
+
+  <div class="actions">
+    <a href="designs/prototype.html" class="action-card primary">
+      <div class="action-icon">&#9883;</div>
+      <div class="action-text">
+        <div class="action-title">View Current Prototype</div>
+        <div class="action-desc">Interactive 4-screen clickable prototype</div>
+      </div>
+      <span class="action-arrow">&rarr;</span>
+    </a>
+
+    <div class="action-card secondary" id="toggle-archive">
+      <div class="action-icon">&#9776;</div>
+      <div class="action-text">
+        <div class="action-title">View Archived Ideas</div>
+        <div class="action-desc">Visual design explorations and past iterations</div>
+      </div>
+      <span class="action-arrow">&darr;</span>
+    </div>
+  </div>
+
+  <div class="archive-section" id="archive">
+    <div class="section-header">
+      <span class="section-title">Design Timeline</span>
+      <span class="section-close" id="close-archive">Close &times;</span>
+    </div>
+
+    <div class="timeline">
+
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <a href="designs/archive/design-3-neon.html" class="timeline-card">
+          <div class="timeline-date">Feb 27, 2026</div>
+          <div class="timeline-title">Neon Sport</div>
+          <div class="timeline-desc">
+            Outfit font, volt green (#CAFF33) + cyan (#00E5FF) accents on deep black.
+            Glassmorphism popovers, ambient gradient header, glow effects.
+            Dark, minimal, data-first.
+          </div>
+          <span class="timeline-tag tag-chosen">&#10003; Chosen Direction</span>
+        </a>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <a href="designs/archive/design-1-brutalist.html" class="timeline-card">
+          <div class="timeline-date">Feb 27, 2026</div>
+          <div class="timeline-title">Brutalist</div>
+          <div class="timeline-desc">
+            JetBrains Mono, pure black (#000), red (#FF0000) accent.
+            ALL CAPS everything, sharp edges, monospaced data tables, raw and aggressive.
+          </div>
+          <span class="timeline-tag tag-explored">Explored</span>
+        </a>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <a href="designs/archive/design-2-luxury.html" class="timeline-card">
+          <div class="timeline-date">Feb 27, 2026</div>
+          <div class="timeline-title">Luxury</div>
+          <div class="timeline-desc">
+            Cormorant Garamond + DM Sans, charcoal (#0E0E10), gold (#C9A96E) accent.
+            Refined serif headlines, thin borders, premium editorial feel.
+          </div>
+          <span class="timeline-tag tag-explored">Explored</span>
+        </a>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <a href="designs/archive/design-4-editorial.html" class="timeline-card">
+          <div class="timeline-date">Feb 27, 2026</div>
+          <div class="timeline-title">Editorial</div>
+          <div class="timeline-desc">
+            Playfair Display italic + Space Grotesk, dark (#111114), orange-red (#E85D3A) accent.
+            Magazine-style layout, dramatic type contrast, oversized headlines.
+          </div>
+          <span class="timeline-tag tag-explored">Explored</span>
+        </a>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <a href="designs/archive/design-5-industrial.html" class="timeline-card">
+          <div class="timeline-date">Feb 27, 2026</div>
+          <div class="timeline-title">Industrial</div>
+          <div class="timeline-desc">
+            IBM Plex Mono, dark blue (#0D1117), steel blue (#4A90D9) + amber (#F5A623).
+            Blueprint grid background, engineering aesthetic, data-dense.
+          </div>
+          <span class="timeline-tag tag-explored">Explored</span>
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-text">Atomic &mdash; The rep is the atomic unit</div>
+  </div>
+
+</div>
+
+<script>
+  const toggle = document.getElementById('toggle-archive');
+  const archive = document.getElementById('archive');
+  const close = document.getElementById('close-archive');
+  const arrow = toggle.querySelector('.action-arrow');
+
+  toggle.addEventListener('click', () => {
+    const visible = archive.classList.toggle('visible');
+    arrow.innerHTML = visible ? '&uarr;' : '&darr;';
+    if (visible) {
+      archive.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+
+  close.addEventListener('click', () => {
+    archive.classList.remove('visible');
+    arrow.innerHTML = '&darr;';
+    toggle.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+</script>
+
+</body>
+</html>

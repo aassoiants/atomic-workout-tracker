@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WODIS — Interactive Prototype</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #060609;
+    font-family: 'Outfit', sans-serif;
+    color: #F0F0F5;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 40px 20px;
+  }
+
+  :root {
+    --bg: #0A0A0F;
+    --surface: #141419;
+    --border: #2A2A33;
+    --text-primary: #F0F0F5;
+    --text-secondary: #7A7A85;
+    --text-tertiary: #4A4A52;
+    --volt: #CAFF33;
+    --volt-dim: rgba(202, 255, 51, 0.15);
+    --volt-glow: rgba(202, 255, 51, 0.4);
+    --cyan: #00E5FF;
+    --cyan-dim: rgba(0, 229, 255, 0.08);
+    --cyan-glow: rgba(0, 229, 255, 0.35);
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  /* ── Phone Frame ── */
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: var(--bg);
+    border-radius: 40px;
+    border: 2px solid var(--border);
+    overflow: hidden;
+    position: relative;
+    box-shadow:
+      0 0 60px rgba(0,0,0,0.6),
+      0 0 1px 1px rgba(202,255,51,0.05),
+      inset 0 0 80px rgba(0,0,0,0.3);
+  }
+
+  .phone::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 150px;
+    height: 30px;
+    background: #000;
+    border-radius: 0 0 20px 20px;
+    z-index: 10;
+  }
+
+  /* ── Screens ── */
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+  }
+
+  .screen.active {
+    display: flex;
+  }
+
+  .screen-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 80px;
+  }
+
+  .screen-scroll::-webkit-scrollbar { width: 0; }
+
+  /* ── Bottom Nav ── */
+  .bottom-nav {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 10px 24px 28px;
+    display: flex;
+    justify-content: space-around;
+    border-top: 1px solid var(--border);
+    background: rgba(10,10,15,0.95);
+    z-index: 5;
+  }
+
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  .nav-item.active { color: var(--volt); }
+  .nav-item .nav-icon { font-size: 20px; }
+
+  /* ── Ambient Header ── */
+  .header-ambient {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .header-ambient::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(202,255,51,0.06) 0%, transparent 40%, rgba(0,229,255,0.04) 60%, transparent 100%);
+    background-size: 300% 300%;
+    animation: ambientGlow 8s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  @keyframes ambientGlow {
+    0%, 100% { background-position: 0% 50%; }
+    25% { background-position: 100% 0%; }
+    50% { background-position: 100% 100%; }
+    75% { background-position: 0% 100%; }
+  }
+
+  /* ── Clickable elements ── */
+  [data-goto] { cursor: pointer; }
+  [data-goto]:hover { opacity: 0.85; }
+
+  /* ═══════════════════════════════════
+     SCREEN: HOME
+     ═══════════════════════════════════ */
+
+  .home-header {
+    padding: 56px 24px 20px;
+  }
+
+  .home-logo {
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+
+  .home-logo span { color: var(--volt); }
+
+  .home-subtitle {
+    font-size: 12px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+
+  .log-new-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 0 20px 24px;
+    padding: 16px;
+    background: var(--volt);
+    color: #0A0A0F;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 0 20px var(--volt-dim), 0 4px 12px rgba(0,0,0,0.3);
+    transition: box-shadow 0.2s;
+  }
+
+  .log-new-btn:hover {
+    box-shadow: 0 0 32px var(--volt-glow), 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  .feed-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    padding: 0 24px 12px;
+  }
+
+  /* ── Session Cards (Feed) ── */
+  .session-card {
+    margin: 0 20px 12px;
+    padding: 16px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .session-card:hover {
+    border-color: rgba(202,255,51,0.2);
+  }
+
+  .sc-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .sc-date {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .sc-duration {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .sc-exercises {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    line-height: 1.4;
+  }
+
+  .sc-bottom {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .sc-stat {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .sc-stat strong {
+    color: var(--text-primary);
+    font-weight: 700;
+  }
+
+  .sc-pr {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--volt);
+    letter-spacing: 1px;
+    background: var(--volt-dim);
+    padding: 3px 8px;
+    border-radius: 10px;
+  }
+
+  /* ═══════════════════════════════════
+     SCREEN: SESSION
+     ═══════════════════════════════════ */
+
+  .session-header {
+    padding: 52px 24px 16px;
+  }
+
+  .session-header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .session-title {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 1px;
+  }
+
+  .session-timer {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--volt);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .session-back {
+    color: var(--text-secondary);
+    font-size: 20px;
+    cursor: pointer;
+  }
+
+  /* ── Session Notes ── */
+  .session-note-area {
+    margin: 0 20px 16px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .session-note-area:hover {
+    border-color: rgba(202,255,51,0.2);
+  }
+
+  .session-note-icon {
+    font-size: 14px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .session-note-text {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    font-style: italic;
+    line-height: 1.4;
+  }
+
+  .session-note-text.has-note {
+    color: var(--text-primary);
+    font-style: normal;
+  }
+
+  /* ── Exercise List ── */
+  .exercise-card {
+    margin: 0 20px 10px;
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .exercise-card:hover {
+    border-color: rgba(202,255,51,0.25);
+    background: rgba(20,20,25,0.8);
+  }
+
+  .ec-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  .ec-name {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .ec-sets-count {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+
+  .ec-last {
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  .ec-suggestion {
+    font-size: 11px;
+    color: var(--cyan);
+    margin-top: 4px;
+    font-weight: 500;
+  }
+
+  .add-exercise-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 16px 20px;
+    padding: 14px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .add-exercise-btn:hover {
+    border-color: var(--volt);
+    color: var(--volt);
+  }
+
+  .finish-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 8px 20px 20px;
+    padding: 14px;
+    background: transparent;
+    border: 1px solid rgba(255,80,80,0.3);
+    border-radius: var(--radius);
+    color: #FF5252;
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .finish-btn:hover {
+    background: rgba(255,80,80,0.08);
+  }
+
+  /* ═══════════════════════════════════
+     SCREEN: EXERCISE
+     ═══════════════════════════════════ */
+
+  .ex-header {
+    padding: 52px 24px 0;
+  }
+
+  .ex-header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  .ex-back {
+    color: var(--text-secondary);
+    font-size: 20px;
+    cursor: pointer;
+  }
+
+  .ex-header-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .ex-note-icon {
+    font-size: 18px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    position: relative;
+    transition: color 0.2s;
+  }
+
+  .ex-note-icon:hover { color: var(--text-primary); }
+
+  .ex-note-icon.has-note { color: var(--volt); }
+
+  .ex-name {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin: 8px 0 16px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Exercise Note (inline expandable) ── */
+  .ex-note-expanded {
+    margin: -8px 0 12px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    position: relative;
+    z-index: 1;
+  }
+
+  .ex-note-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-family: 'Outfit', sans-serif;
+    font-size: 12.5px;
+    font-weight: 400;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+    min-height: 36px;
+  }
+
+  .ex-note-input::placeholder {
+    color: var(--text-tertiary);
+    font-style: italic;
+  }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    z-index: 1;
+  }
+
+  .tab {
+    flex: 1;
+    text-align: center;
+    padding: 12px 0;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    cursor: pointer;
+    position: relative;
+    transition: color 0.2s;
+  }
+
+  .tab.active { color: var(--volt); }
+
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 10%;
+    width: 80%;
+    height: 2px;
+    background: var(--volt);
+    border-radius: 2px;
+    box-shadow: 0 0 8px var(--volt-glow), 0 0 20px var(--volt-dim);
+  }
+
+  .content { padding: 16px 20px 20px; }
+
+  /* ── Suggestion ── */
+  .suggestion {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--cyan-dim);
+    border: 1px solid rgba(0,229,255,0.12);
+    border-radius: var(--radius-sm);
+    margin-bottom: 18px;
+    font-size: 12.5px;
+    color: var(--cyan);
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── Set Table ── */
+  .set-table { width: 100%; border-collapse: collapse; }
+
+  .set-table thead th {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    padding: 0 0 10px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .set-table thead th:first-child {
+    text-align: left;
+    width: 42px;
+  }
+
+  .set-table thead th:last-child { width: 32px; }
+
+  .set-table tbody tr {
+    border-bottom: 1px solid rgba(42,42,51,0.5);
+    transition: background 0.15s;
+  }
+
+  .set-table tbody td {
+    padding: 12px 4px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+    vertical-align: middle;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .set-table tbody td:first-child {
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    padding-left: 2px;
+  }
+
+  /* ── More Dots ── */
+  .more-dots {
+    color: var(--text-secondary);
+    font-size: 16px;
+    cursor: pointer;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    letter-spacing: 1px;
+  }
+
+  .has-detail { border-bottom: none !important; }
+  .has-detail td { padding-bottom: 4px !important; }
+
+  .has-detail .more-dots::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -8px;
+    width: 6px;
+    height: 6px;
+    background: var(--volt);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--volt-glow);
+  }
+
+  /* ── Drop-set sub-row ── */
+  .drop-row { border-bottom: 1px solid rgba(42,42,51,0.5); }
+
+  .drop-row td {
+    padding-top: 0 !important;
+    padding-bottom: 10px !important;
+    font-size: 13px !important;
+  }
+
+  .drop-row td:first-child { position: relative; }
+
+  .drop-row td:first-child::before {
+    content: '↳';
+    position: absolute;
+    right: 2px;
+    top: 0;
+    font-size: 12px;
+    color: var(--cyan);
+    opacity: 0.6;
+  }
+
+  .drop-weight {
+    color: var(--cyan) !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    text-shadow: 0 0 6px var(--cyan-glow);
+  }
+
+  .drop-reps {
+    color: var(--cyan) !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    opacity: 0.8;
+  }
+
+  /* ── Input Row ── */
+  .input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 12px;
+    margin: 4px -4px 0;
+    border-left: 3px solid var(--volt);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    background: linear-gradient(90deg, var(--volt-dim), transparent 60%);
+  }
+
+  .input-row .set-num {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    min-width: 28px;
+  }
+
+  .input-field {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: 'Outfit', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 10px 8px;
+    text-align: center;
+    width: 72px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .input-field:focus, .input-field.has-value {
+    border-color: var(--volt);
+    box-shadow: 0 0 6px var(--volt-dim);
+  }
+
+  .input-multiply {
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .log-set-btn {
+    margin-left: auto;
+    padding: 10px 18px;
+    background: var(--volt);
+    color: #0A0A0F;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 0 10px var(--volt-dim);
+  }
+
+  /* ── Tags ── */
+  .tags { display: flex; gap: 8px; margin: 16px 0; flex-wrap: wrap; }
+
+  .tag {
+    padding: 6px 14px;
+    border: 1px solid rgba(202,255,51,0.35);
+    border-radius: 20px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--volt);
+    cursor: pointer;
+    background: rgba(202,255,51,0.04);
+  }
+
+  .add-set-btn {
+    width: 100%;
+    padding: 14px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  /* ═══════════════════════════════════
+     SCREEN: PER-REP DETAIL
+     ═══════════════════════════════════ */
+
+  .detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 52px 24px 16px;
+    position: relative;
+  }
+
+  .detail-header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0,229,255,0.05) 0%, transparent 50%, rgba(202,255,51,0.04) 100%);
+    background-size: 300% 300%;
+    animation: ambientGlow 8s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .detail-back {
+    color: var(--text-secondary);
+    font-size: 20px;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+    margin-right: 12px;
+  }
+
+  .detail-title {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    position: relative;
+    z-index: 1;
+    flex: 1;
+  }
+
+  .detail-title .rep-count { color: var(--volt); }
+
+  .done-btn {
+    padding: 8px 22px;
+    background: var(--volt);
+    color: #0A0A0F;
+    border: none;
+    border-radius: 20px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 0 16px var(--volt-dim);
+  }
+
+  .rep-content { padding: 0 20px 20px; }
+
+  .rep-table-header {
+    display: grid;
+    grid-template-columns: 44px 1fr 60px 32px;
+    gap: 4px;
+    padding: 0 0 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2px;
+  }
+
+  .rep-table-header span {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  .rep-table-header span:nth-child(2),
+  .rep-table-header span:nth-child(3),
+  .rep-table-header span:nth-child(4) { text-align: center; }
+
+  .rep-row {
+    display: grid;
+    grid-template-columns: 44px 1fr 60px 32px;
+    gap: 4px;
+    align-items: center;
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(42,42,51,0.4);
+    position: relative;
+  }
+
+  .rep-row.weight-changed {
+    background: var(--cyan-dim);
+    margin: 0 -20px;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .rep-num {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  .rep-weight-cell { text-align: center; }
+
+  .rep-weight {
+    font-size: 16px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rep-weight.changed {
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan-glow);
+  }
+
+  .rep-flags {
+    display: flex;
+    gap: 3px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .rep-flag {
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 3px 6px;
+    border-radius: 3px;
+    line-height: 1;
+  }
+
+  .rep-flag.assisted {
+    background: rgba(0,229,255,0.12);
+    color: var(--cyan);
+    border: 1px solid rgba(0,229,255,0.2);
+  }
+
+  .rep-flag.partial {
+    background: rgba(255,170,0,0.1);
+    color: #FFAA00;
+    border: 1px solid rgba(255,170,0,0.2);
+  }
+
+  .rep-flag.failure {
+    background: rgba(255,60,60,0.1);
+    color: #FF5252;
+    border: 1px solid rgba(255,60,60,0.2);
+  }
+
+  .rep-more {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  /* ── Flag Popover ── */
+  .popover-anchor { position: relative; }
+
+  .flag-popover {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 4px;
+    z-index: 100;
+    min-width: 160px;
+    padding: 8px 0;
+    background: rgba(25, 25, 35, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(0,229,255,0.15);
+    border-radius: var(--radius);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 1px rgba(0,229,255,0.2);
+  }
+
+  .popover-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+
+  .popover-item .pi-icon {
+    font-size: 14px;
+    width: 20px;
+    text-align: center;
+  }
+
+  .popover-item.active {
+    color: var(--cyan);
+    text-shadow: 0 0 6px var(--cyan-glow);
+  }
+
+  .popover-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+  }
+
+  /* ── Screen transition hint ── */
+  .hint {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: var(--text-tertiary);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="phone">
+
+  <!-- ═══ SCREEN: HOME ═══ -->
+  <div class="screen active" id="screen-home">
+    <div class="screen-scroll">
+      <div class="home-header header-ambient">
+        <div class="home-logo">W<span>O</span>DIS</div>
+        <div class="home-subtitle">Your training, your data</div>
+      </div>
+
+      <button class="log-new-btn" data-goto="screen-session">
+        <span>+</span> Log New Session
+      </button>
+
+      <div class="feed-label">Recent Sessions</div>
+
+      <div class="session-card">
+        <div class="sc-top">
+          <span class="sc-date">Feb 25 &middot; Push Day</span>
+          <span class="sc-duration">72 min</span>
+        </div>
+        <div class="sc-exercises">Bench Press, Incline DB Press, Triceps Pushdown, Lateral Raise</div>
+        <div class="sc-bottom">
+          <span class="sc-stat"><strong>14,200</strong> lbs</span>
+          <span class="sc-stat"><strong>16</strong> sets</span>
+          <span class="sc-pr">&#9733; 2 PRs</span>
+        </div>
+      </div>
+
+      <div class="session-card">
+        <div class="sc-top">
+          <span class="sc-date">Feb 24 &middot; Pull Day</span>
+          <span class="sc-duration">65 min</span>
+        </div>
+        <div class="sc-exercises">Barbell Row, Chin-Up, Lat Pulldown, Face Pull, Curl</div>
+        <div class="sc-bottom">
+          <span class="sc-stat"><strong>11,800</strong> lbs</span>
+          <span class="sc-stat"><strong>18</strong> sets</span>
+        </div>
+      </div>
+
+      <div class="session-card">
+        <div class="sc-top">
+          <span class="sc-date">Feb 22 &middot; Legs</span>
+          <span class="sc-duration">58 min</span>
+        </div>
+        <div class="sc-exercises">Squat, Romanian Deadlift, Leg Press, Leg Curl</div>
+        <div class="sc-bottom">
+          <span class="sc-stat"><strong>18,600</strong> lbs</span>
+          <span class="sc-stat"><strong>14</strong> sets</span>
+          <span class="sc-pr">&#9733; 1 PR</span>
+        </div>
+      </div>
+
+      <div class="session-card">
+        <div class="sc-top">
+          <span class="sc-date">Feb 20 &middot; Push Day</span>
+          <span class="sc-duration">68 min</span>
+        </div>
+        <div class="sc-exercises">Bench Press, OHP, Incline DB Press, Dips</div>
+        <div class="sc-bottom">
+          <span class="sc-stat"><strong>13,400</strong> lbs</span>
+          <span class="sc-stat"><strong>15</strong> sets</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-nav">
+      <div class="nav-item active"><span class="nav-icon">&#9776;</span>Feed</div>
+      <div class="nav-item"><span class="nav-icon">&#9883;</span>Log</div>
+      <div class="nav-item"><span class="nav-icon">&#9779;</span>Stats</div>
+      <div class="nav-item"><span class="nav-icon">&#9881;</span>More</div>
+    </div>
+  </div>
+
+  <!-- ═══ SCREEN: SESSION ═══ -->
+  <div class="screen" id="screen-session">
+    <div class="screen-scroll">
+      <div class="session-header header-ambient">
+        <div class="session-header-top">
+          <span class="session-back" data-goto="screen-home">&#8592;</span>
+          <span class="session-title">New Session</span>
+          <span class="session-timer">12:34</span>
+        </div>
+      </div>
+
+      <!-- Session Note -->
+      <div class="session-note-area" id="session-note-toggle">
+        <span class="session-note-icon">&#9998;</span>
+        <span class="session-note-text">Add a note about today's session...</span>
+      </div>
+
+      <!-- Exercise Cards -->
+      <div class="exercise-card" data-goto="screen-exercise">
+        <div class="ec-top">
+          <span class="ec-name">Bench Press</span>
+          <span class="ec-sets-count">4 sets</span>
+        </div>
+        <div class="ec-last">Last: 225 &times; 8, 8, 8, 6 &middot; Feb 25</div>
+        <div class="ec-suggestion">&#9889; Suggested: 225 lbs &middot; fatigue ~15%</div>
+      </div>
+
+      <button class="add-exercise-btn">
+        <span>+</span> Add Exercise
+      </button>
+
+      <button class="finish-btn">
+        Finish Session
+      </button>
+    </div>
+
+    <div class="bottom-nav">
+      <div class="nav-item"><span class="nav-icon">&#9776;</span>Feed</div>
+      <div class="nav-item active"><span class="nav-icon">&#9883;</span>Log</div>
+      <div class="nav-item"><span class="nav-icon">&#9779;</span>Stats</div>
+      <div class="nav-item"><span class="nav-icon">&#9881;</span>More</div>
+    </div>
+  </div>
+
+  <!-- ═══ SCREEN: EXERCISE ═══ -->
+  <div class="screen" id="screen-exercise">
+    <div class="screen-scroll">
+      <div class="ex-header header-ambient">
+        <div class="ex-header-top">
+          <span class="ex-back" data-goto="screen-session">&#8592;</span>
+          <div class="ex-header-actions">
+            <span class="ex-note-icon has-note" id="ex-note-toggle" title="Exercise note">&#9998;</span>
+          </div>
+        </div>
+        <div class="ex-name">Bench Press</div>
+
+        <!-- Exercise Note (expanded) -->
+        <div class="ex-note-expanded" id="ex-note-area">
+          <textarea class="ex-note-input" rows="2" placeholder="Add a note about this exercise...">Try wider grip next time. Felt tight on first warmup set.</textarea>
+        </div>
+
+        <div class="tabs">
+          <div class="tab active">New</div>
+          <div class="tab">History</div>
+          <div class="tab">Graph</div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="suggestion">
+          <span>&#9889;</span>
+          Suggested: 225 lbs (fatigue ~15%)
+        </div>
+
+        <table class="set-table">
+          <thead>
+            <tr>
+              <th>Set</th>
+              <th>Lbs</th>
+              <th>Reps</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td>135</td>
+              <td>5</td>
+              <td><span class="more-dots">&#8943;</span></td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td>225</td>
+              <td>8</td>
+              <td><span class="more-dots">&#8943;</span></td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td>225</td>
+              <td>8</td>
+              <td><span class="more-dots">&#8943;</span></td>
+            </tr>
+            <tr class="has-detail">
+              <td>4</td>
+              <td>225</td>
+              <td>8</td>
+              <td><span class="more-dots" data-goto="screen-detail">&#8943;</span></td>
+            </tr>
+            <tr class="drop-row">
+              <td></td>
+              <td><span class="drop-weight">185</span></td>
+              <td><span class="drop-reps">4</span></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="input-row">
+          <span class="set-num">5</span>
+          <input class="input-field has-value" type="text" value="225">
+          <span class="input-multiply">&times;</span>
+          <input class="input-field" type="text" value="" placeholder="&#8212;">
+          <button class="log-set-btn">Log</button>
+        </div>
+
+        <div class="tags">
+          <span class="tag">AMRAP</span>
+          <span class="tag">Backoff</span>
+        </div>
+
+        <button class="add-set-btn">
+          <span>+</span> Add Set
+        </button>
+      </div>
+    </div>
+
+    <div class="bottom-nav">
+      <div class="nav-item"><span class="nav-icon">&#9776;</span>Feed</div>
+      <div class="nav-item active"><span class="nav-icon">&#9883;</span>Log</div>
+      <div class="nav-item"><span class="nav-icon">&#9779;</span>Stats</div>
+      <div class="nav-item"><span class="nav-icon">&#9881;</span>More</div>
+    </div>
+  </div>
+
+  <!-- ═══ SCREEN: PER-REP DETAIL ═══ -->
+  <div class="screen" id="screen-detail">
+    <div class="screen-scroll">
+      <div class="detail-header">
+        <span class="detail-back" data-goto="screen-exercise">&#8592;</span>
+        <div class="detail-title">Set 4 &middot; <span class="rep-count">12 Reps</span></div>
+        <button class="done-btn" data-goto="screen-exercise">Done</button>
+      </div>
+
+      <div class="rep-content">
+        <div class="rep-table-header">
+          <span>Rep</span>
+          <span>Lbs</span>
+          <span>Flags</span>
+          <span></span>
+        </div>
+
+        <div class="rep-row"><span class="rep-num">1</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
+        <div class="rep-row"><span class="rep-num">2</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
+        <div class="rep-row"><span class="rep-num">3</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
+        <div class="rep-row"><span class="rep-num">4</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
+        <div class="rep-row"><span class="rep-num">5</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
+        <div class="rep-row"><span class="rep-num">6</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
+        <div class="rep-row"><span class="rep-num">7</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
+        <div class="rep-row"><span class="rep-num">8</span><div class="rep-weight-cell"><span class="rep-weight">225</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
+
+        <div class="rep-row weight-changed"><span class="rep-num">9</span><div class="rep-weight-cell"><span class="rep-weight changed">185</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
+        <div class="rep-row weight-changed"><span class="rep-num">10</span><div class="rep-weight-cell"><span class="rep-weight changed">185</span></div><div class="rep-flags"></div><div class="rep-more">&#8943;</div></div>
+        <div class="rep-row weight-changed"><span class="rep-num">11</span><div class="rep-weight-cell"><span class="rep-weight changed">185</span></div><div class="rep-flags"><span class="rep-flag assisted">Assisted</span></div><div class="rep-more">&#8943;</div></div>
+
+        <div class="rep-row weight-changed popover-anchor">
+          <span class="rep-num">12</span>
+          <div class="rep-weight-cell"><span class="rep-weight changed">185</span></div>
+          <div class="rep-flags">
+            <span class="rep-flag partial">Partial</span>
+            <span class="rep-flag failure">Failure</span>
+          </div>
+          <div class="rep-more">&#8943;</div>
+
+          <div class="flag-popover">
+            <div class="popover-item active"><span class="pi-icon">&#10040;</span> Assisted</div>
+            <div class="popover-divider"></div>
+            <div class="popover-item active"><span class="pi-icon">&#9673;</span> Partial</div>
+            <div class="popover-item active"><span class="pi-icon">&#9888;</span> Failure</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-nav">
+      <div class="nav-item"><span class="nav-icon">&#9776;</span>Feed</div>
+      <div class="nav-item active"><span class="nav-icon">&#9883;</span>Log</div>
+      <div class="nav-item"><span class="nav-icon">&#9779;</span>Stats</div>
+      <div class="nav-item"><span class="nav-icon">&#9881;</span>More</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="hint">Click highlighted elements to navigate</div>
+
+<script>
+  // Screen navigation
+  document.querySelectorAll('[data-goto]').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const target = el.getAttribute('data-goto');
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(target).classList.add('active');
+      // Scroll to top
+      document.getElementById(target).querySelector('.screen-scroll')?.scrollTo(0, 0);
+    });
+  });
+
+  // Exercise note toggle
+  const exNoteToggle = document.getElementById('ex-note-toggle');
+  const exNoteArea = document.getElementById('ex-note-area');
+  let noteVisible = true;
+
+  exNoteToggle?.addEventListener('click', () => {
+    noteVisible = !noteVisible;
+    exNoteArea.style.display = noteVisible ? 'block' : 'none';
+  });
+
+  // Session note toggle
+  const sessionNoteToggle = document.getElementById('session-note-toggle');
+  let sessionNoteExpanded = false;
+
+  sessionNoteToggle?.addEventListener('click', () => {
+    sessionNoteExpanded = !sessionNoteExpanded;
+    const textEl = sessionNoteToggle.querySelector('.session-note-text');
+    if (sessionNoteExpanded) {
+      sessionNoteToggle.innerHTML = `
+        <span class="session-note-icon">&#9998;</span>
+        <div style="flex:1">
+          <textarea class="ex-note-input" rows="3" placeholder="Session note..."
+            style="width:100%;background:transparent;border:none;color:var(--text-primary);font-family:'Outfit',sans-serif;font-size:12.5px;outline:none;resize:none;">Slept 6 hours. Felt decent but left shoulder still tight from yesterday.</textarea>
+        </div>
+      `;
+      sessionNoteToggle.style.borderColor = 'rgba(202,255,51,0.2)';
+    }
+  });
+</script>
+
+</body>
+</html>

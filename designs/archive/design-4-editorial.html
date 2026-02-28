@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WODIS — Editorial Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #111114;
+    --bg-raised: #18181C;
+    --bg-surface: #1E1E23;
+    --accent: #E85D3A;
+    --accent-dim: rgba(232, 93, 58, 0.15);
+    --text-primary: #DDDDE0;
+    --text-secondary: #777780;
+    --text-tertiary: #55555C;
+    --text-muted: #44444A;
+    --check-green: #5CBF8A;
+    --serif: 'Playfair Display', Georgia, serif;
+    --sans: 'Space Grotesk', 'SF Mono', monospace;
+  }
+
+  body {
+    background: #0A0A0C;
+    font-family: var(--sans);
+    color: var(--text-primary);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 40px;
+    padding: 40px 20px;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .screen {
+    width: 390px;
+    min-width: 390px;
+    background: var(--bg);
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .screen-label {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    text-align: center;
+    padding: 16px 0 12px;
+  }
+
+  /* ─── STATUS BAR ─── */
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 24px 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+  .status-bar .time { font-weight: 600; color: var(--text-primary); }
+
+  /* ─── SCREEN 1: EXERCISE LOGGING ─── */
+  .exercise-header {
+    padding: 8px 24px 0;
+  }
+  .exercise-back {
+    font-size: 13px;
+    color: var(--text-secondary);
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .exercise-back span {
+    font-size: 16px;
+    opacity: 0.5;
+  }
+  .exercise-name {
+    font-family: var(--serif);
+    font-size: 36px;
+    font-style: italic;
+    font-weight: 400;
+    color: var(--text-primary);
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    padding-bottom: 16px;
+  }
+
+  /* ─── TABS ─── */
+  .tabs {
+    display: flex;
+    gap: 0;
+    padding: 0 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .tab {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding: 10px 0;
+    margin-right: 28px;
+    position: relative;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .tab.active {
+    color: var(--text-primary);
+  }
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 1.5px;
+    background: var(--accent);
+  }
+
+  /* ─── SUGGESTION ─── */
+  .suggestion {
+    padding: 16px 24px 12px;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--text-secondary);
+    letter-spacing: 0.01em;
+  }
+  .suggestion strong {
+    font-weight: 400;
+    color: var(--text-primary);
+    font-style: italic;
+  }
+
+  /* ─── SET TABLE ─── */
+  .set-table {
+    padding: 0 24px;
+  }
+  .set-header {
+    display: grid;
+    grid-template-columns: 42px 1fr 1fr 36px 28px;
+    align-items: center;
+    padding: 8px 0;
+    margin-bottom: 2px;
+  }
+  .set-header span {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .set-header span:nth-child(2),
+  .set-header span:nth-child(3) {
+    text-align: right;
+    padding-right: 12px;
+  }
+  .set-header span:nth-child(4),
+  .set-header span:nth-child(5) {
+    text-align: center;
+  }
+
+  .set-row {
+    display: grid;
+    grid-template-columns: 42px 1fr 1fr 36px 28px;
+    align-items: center;
+    padding: 11px 0;
+    position: relative;
+    transition: background 0.15s;
+  }
+  .set-row:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(255,255,255,0.025);
+  }
+  .set-row.has-detail {
+    cursor: pointer;
+  }
+  .set-row.has-detail:hover {
+    background: rgba(255,255,255,0.015);
+  }
+  .set-num {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-tertiary);
+  }
+  .set-weight {
+    font-size: 24px;
+    font-weight: 500;
+    color: var(--text-primary);
+    text-align: right;
+    padding-right: 12px;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .set-reps {
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    text-align: right;
+    padding-right: 12px;
+    line-height: 1;
+  }
+  .set-check {
+    text-align: center;
+    font-size: 15px;
+    color: var(--check-green);
+  }
+  .set-more {
+    text-align: center;
+    font-size: 16px;
+    color: var(--text-muted);
+    cursor: pointer;
+    letter-spacing: 1px;
+  }
+  .set-row.has-detail .set-num {
+    color: var(--accent);
+    font-weight: 500;
+  }
+  .set-row.has-detail .per-rep-indicator {
+    font-size: 9px;
+    font-weight: 400;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-left: 2px;
+    opacity: 0.7;
+  }
+
+  /* ─── CURRENT INPUT ROW ─── */
+  .input-row {
+    display: grid;
+    grid-template-columns: 42px 1fr 1fr 36px 28px;
+    align-items: center;
+    padding: 10px 0;
+    margin-top: 4px;
+  }
+  .input-row .set-num {
+    color: var(--text-muted);
+  }
+  .input-field {
+    background: var(--bg-surface);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-family: var(--sans);
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-primary);
+    text-align: right;
+    margin-right: 12px;
+    outline: none;
+    width: calc(100% - 12px);
+    margin-left: auto;
+  }
+  .input-field::placeholder {
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+  .input-field:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-dim);
+  }
+  .input-check {
+    text-align: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1.5px solid var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    cursor: pointer;
+  }
+
+  /* ─── TAGS ─── */
+  .tags-section {
+    display: flex;
+    gap: 8px;
+    padding: 14px 24px 4px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--accent-dim);
+    padding: 5px 12px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  /* ─── ADD SET ─── */
+  .add-set {
+    padding: 16px 24px 24px;
+  }
+  .add-set-btn {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    background: none;
+    border: 1px dashed rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 12px;
+    width: 100%;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .add-set-btn:hover {
+    color: var(--text-secondary);
+    border-color: rgba(255,255,255,0.15);
+  }
+
+  /* ─── BOTTOM NAV ─── */
+  .bottom-nav {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 12px 0;
+    border-top: 1px solid rgba(255,255,255,0.04);
+    margin-top: 8px;
+  }
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .nav-item.active { color: var(--accent); }
+  .nav-icon {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  /* ═══════════════════════════════════════ */
+  /* ─── SCREEN 2: PER-REP DETAIL ──────── */
+  /* ═══════════════════════════════════════ */
+
+  .rep-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 10px 24px 0;
+  }
+  .rep-title {
+    font-family: var(--serif);
+    font-size: 24px;
+    font-style: italic;
+    font-weight: 400;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+  .rep-title span {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-style: normal;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+  .done-btn {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--bg);
+    background: var(--accent);
+    border: none;
+    border-radius: 6px;
+    padding: 8px 20px;
+    cursor: pointer;
+  }
+
+  /* ─── REP TABLE ─── */
+  .rep-table {
+    padding: 20px 24px 0;
+  }
+  .rep-table-header {
+    display: grid;
+    grid-template-columns: 40px 1fr 60px;
+    padding: 0 0 8px;
+  }
+  .rep-table-header span {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .rep-table-header span:nth-child(2) {
+    text-align: right;
+    padding-right: 16px;
+  }
+  .rep-table-header span:nth-child(3) {
+    text-align: center;
+  }
+
+  .rep-row {
+    display: grid;
+    grid-template-columns: 40px 1fr 60px;
+    align-items: start;
+    padding: 9px 0;
+    position: relative;
+  }
+  .rep-row:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(255,255,255,0.02);
+  }
+  .rep-number {
+    font-family: var(--serif);
+    font-size: 20px;
+    font-weight: 400;
+    color: var(--text-tertiary);
+    line-height: 1.2;
+  }
+  .rep-row.changed .rep-number {
+    color: var(--accent);
+  }
+  .rep-weight-col {
+    text-align: right;
+    padding-right: 16px;
+  }
+  .rep-weight {
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--text-primary);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+  .rep-row.changed .rep-weight {
+    color: var(--accent);
+  }
+  .rep-flags-col {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .rep-flag-icon {
+    font-size: 14px;
+    color: var(--text-muted);
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.15s;
+  }
+  .rep-flag-icon:hover {
+    background: rgba(255,255,255,0.04);
+  }
+  .rep-flag-icon.flagged {
+    color: var(--accent);
+  }
+  .rep-annotation {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    line-height: 1.3;
+    padding-right: 16px;
+    text-align: right;
+    padding-top: 2px;
+  }
+
+  /* ─── FLAG POPOVER ─── */
+  .popover-anchor {
+    position: relative;
+  }
+  .flag-popover {
+    position: absolute;
+    right: 40px;
+    top: -8px;
+    background: var(--bg-surface);
+    border-radius: 10px;
+    padding: 6px 0;
+    min-width: 160px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06);
+    z-index: 10;
+  }
+  .popover-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .popover-item:hover {
+    background: rgba(255,255,255,0.03);
+  }
+  .popover-item.selected {
+    color: var(--text-primary);
+  }
+  .popover-check {
+    font-size: 14px;
+    color: var(--accent);
+    opacity: 0;
+  }
+  .popover-item.selected .popover-check {
+    opacity: 1;
+  }
+
+  /* ─── SCROLL AREA ─── */
+  .rep-scroll {
+    max-height: 540px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.08) transparent;
+  }
+  .rep-scroll::-webkit-scrollbar {
+    width: 3px;
+  }
+  .rep-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+  }
+
+  /* ─── HOME INDICATOR ─── */
+  .home-indicator {
+    display: flex;
+    justify-content: center;
+    padding: 8px 0 6px;
+  }
+  .home-indicator div {
+    width: 120px;
+    height: 4px;
+    background: rgba(255,255,255,0.12);
+    border-radius: 2px;
+  }
+
+  /* ─── BATTERY ICONS (SVG-free) ─── */
+  .status-icons {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- SCREEN 1: EXERCISE LOGGING                  -->
+<!-- ════════════════════════════════════════════ -->
+<div>
+  <div class="screen-label">Exercise Logging</div>
+  <div class="screen">
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <span class="time">9:41</span>
+      <div class="status-icons">
+        <span>●●●●○</span>
+        <span>▪▪▪</span>
+      </div>
+    </div>
+
+    <!-- Exercise Header -->
+    <div class="exercise-header">
+      <div class="exercise-back"><span>‹</span> workout</div>
+      <div class="exercise-name">Bench Press</div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active">New</div>
+      <div class="tab">History</div>
+      <div class="tab">Graph</div>
+    </div>
+
+    <!-- Suggestion -->
+    <div class="suggestion">
+      Suggested: <strong>225 lbs</strong> · fatigue ~15%
+    </div>
+
+    <!-- Set Table -->
+    <div class="set-table">
+      <!-- Header -->
+      <div class="set-header">
+        <span>SET</span>
+        <span>LBS</span>
+        <span>REPS</span>
+        <span>✓</span>
+        <span>⋯</span>
+      </div>
+
+      <!-- Set 1 -->
+      <div class="set-row">
+        <div class="set-num">1</div>
+        <div class="set-weight">135</div>
+        <div class="set-reps">5</div>
+        <div class="set-check">✓</div>
+        <div class="set-more">⋯</div>
+      </div>
+
+      <!-- Set 2 -->
+      <div class="set-row">
+        <div class="set-num">2</div>
+        <div class="set-weight">225</div>
+        <div class="set-reps">8</div>
+        <div class="set-check">✓</div>
+        <div class="set-more">⋯</div>
+      </div>
+
+      <!-- Set 3 -->
+      <div class="set-row">
+        <div class="set-num">3</div>
+        <div class="set-weight">225</div>
+        <div class="set-reps">8</div>
+        <div class="set-check">✓</div>
+        <div class="set-more">⋯</div>
+      </div>
+
+      <!-- Set 4 (per-rep data) -->
+      <div class="set-row has-detail">
+        <div class="set-num">4 <span class="per-rep-indicator">per-rep</span></div>
+        <div class="set-weight">225</div>
+        <div class="set-reps">12</div>
+        <div class="set-check">✓</div>
+        <div class="set-more">⋯</div>
+      </div>
+
+      <!-- Current input row -->
+      <div class="input-row">
+        <div class="set-num" style="color: var(--text-muted);">5</div>
+        <div><div class="input-field" style="text-align: right;">225</div></div>
+        <div><div class="input-field" style="text-align: right;" data-placeholder>—</div></div>
+        <div class="input-check">
+          <span style="color: var(--text-muted); font-size: 12px;"></span>
+        </div>
+        <div class="set-more" style="visibility: hidden;">⋯</div>
+      </div>
+    </div>
+
+    <!-- Tags -->
+    <div class="tags-section">
+      <div class="tag">amrap</div>
+      <div class="tag">backoff</div>
+    </div>
+
+    <!-- Add Set -->
+    <div class="add-set">
+      <button class="add-set-btn">+ Add Set</button>
+    </div>
+
+    <!-- Bottom Nav -->
+    <div class="bottom-nav">
+      <div class="nav-item">
+        <span class="nav-icon">◷</span>
+        <span>Timer</span>
+      </div>
+      <div class="nav-item active">
+        <span class="nav-icon">⊕</span>
+        <span>Log</span>
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">◑</span>
+        <span>Stats</span>
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">≡</span>
+        <span>More</span>
+      </div>
+    </div>
+
+    <!-- Home Indicator -->
+    <div class="home-indicator"><div></div></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- SCREEN 2: PER-REP DETAIL                    -->
+<!-- ════════════════════════════════════════════ -->
+<div>
+  <div class="screen-label">Per-Rep Detail</div>
+  <div class="screen">
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <span class="time">9:41</span>
+      <div class="status-icons">
+        <span>●●●●○</span>
+        <span>▪▪▪</span>
+      </div>
+    </div>
+
+    <!-- Rep Header -->
+    <div class="rep-header">
+      <div class="rep-title">Set 4 <span>· 12 reps</span></div>
+      <button class="done-btn">Done</button>
+    </div>
+
+    <!-- Rep Table -->
+    <div class="rep-scroll">
+      <div class="rep-table">
+        <div class="rep-table-header">
+          <span>REP</span>
+          <span>LBS</span>
+          <span>FLAGS</span>
+        </div>
+
+        <!-- Rep 1 -->
+        <div class="rep-row">
+          <div class="rep-number">1</div>
+          <div class="rep-weight-col"><div class="rep-weight">225</div></div>
+          <div class="rep-flags-col"><div class="rep-flag-icon">⚑</div></div>
+        </div>
+
+        <!-- Rep 2 -->
+        <div class="rep-row">
+          <div class="rep-number">2</div>
+          <div class="rep-weight-col"><div class="rep-weight">225</div></div>
+          <div class="rep-flags-col"><div class="rep-flag-icon">⚑</div></div>
+        </div>
+
+        <!-- Rep 3 -->
+        <div class="rep-row">
+          <div class="rep-number">3</div>
+          <div class="rep-weight-col"><div class="rep-weight">225</div></div>
+          <div class="rep-flags-col"><div class="rep-flag-icon">⚑</div></div>
+        </div>
+
+        <!-- Rep 4 -->
+        <div class="rep-row">
+          <div class="rep-number">4</div>
+          <div class="rep-weight-col"><div class="rep-weight">225</div></div>
+          <div class="rep-flags-col"><div class="rep-flag-icon">⚑</div></div>
+        </div>
+
+        <!-- Rep 5 -->
+        <div class="rep-row">
+          <div class="rep-number">5</div>
+          <div class="rep-weight-col"><div class="rep-weight">225</div></div>
+          <div class="rep-flags-col"><div class="rep-flag-icon">⚑</div></div>
+        </div>
+
+        <!-- Rep 6 -->
+        <div class="rep-row">
+          <div class="rep-number">6</div>
+          <div class="rep-weight-col"><div class="rep-weight">225</div></div>
+          <div class="rep-flags-col"><div class="rep-flag-icon">⚑</div></div>
+        </div>
+
+        <!-- Rep 7 -->
+        <div class="rep-row">
+          <div class="rep-number">7</div>
+          <div class="rep-weight-col"><div class="rep-weight">225</div></div>
+          <div class="rep-flags-col"><div class="rep-flag-icon">⚑</div></div>
+        </div>
+
+        <!-- Rep 8 -->
+        <div class="rep-row">
+          <div class="rep-number">8</div>
+          <div class="rep-weight-col"><div class="rep-weight">225</div></div>
+          <div class="rep-flags-col"><div class="rep-flag-icon">⚑</div></div>
+        </div>
+
+        <!-- Rep 9 (weight changed) -->
+        <div class="rep-row changed">
+          <div class="rep-number">9</div>
+          <div class="rep-weight-col"><div class="rep-weight">185</div></div>
+          <div class="rep-flags-col"><div class="rep-flag-icon">⚑</div></div>
+        </div>
+
+        <!-- Rep 10 (weight changed) -->
+        <div class="rep-row changed">
+          <div class="rep-number">10</div>
+          <div class="rep-weight-col"><div class="rep-weight">185</div></div>
+          <div class="rep-flags-col"><div class="rep-flag-icon">⚑</div></div>
+        </div>
+
+        <!-- Rep 11 (weight changed + assisted) -->
+        <div class="rep-row changed">
+          <div class="rep-number">11</div>
+          <div class="rep-weight-col">
+            <div class="rep-weight">185</div>
+            <div class="rep-annotation">assisted</div>
+          </div>
+          <div class="rep-flags-col">
+            <div class="rep-flag-icon flagged">⚑</div>
+          </div>
+        </div>
+
+        <!-- Rep 12 (weight changed + partial + failure, with popover) -->
+        <div class="rep-row changed popover-anchor">
+          <div class="rep-number">12</div>
+          <div class="rep-weight-col">
+            <div class="rep-weight">185</div>
+            <div class="rep-annotation">partial &middot; failure</div>
+          </div>
+          <div class="rep-flags-col">
+            <div class="rep-flag-icon flagged">⚑</div>
+          </div>
+
+          <!-- Flag Popover -->
+          <div class="flag-popover">
+            <div class="popover-item">
+              <span>Assisted</span>
+              <span class="popover-check">✓</span>
+            </div>
+            <div class="popover-item selected">
+              <span>Partial</span>
+              <span class="popover-check">✓</span>
+            </div>
+            <div class="popover-item selected">
+              <span>Failure</span>
+              <span class="popover-check">✓</span>
+            </div>
+            <div class="popover-item">
+              <span>Pause</span>
+              <span class="popover-check">✓</span>
+            </div>
+            <div class="popover-item">
+              <span>Tempo</span>
+              <span class="popover-check">✓</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom spacer + nav -->
+    <div style="flex:1;"></div>
+    <div class="bottom-nav">
+      <div class="nav-item">
+        <span class="nav-icon">◷</span>
+        <span>Timer</span>
+      </div>
+      <div class="nav-item active">
+        <span class="nav-icon">⊕</span>
+        <span>Log</span>
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">◑</span>
+        <span>Stats</span>
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">≡</span>
+        <span>More</span>
+      </div>
+    </div>
+    <div class="home-indicator"><div></div></div>
+  </div>
+</div>
+
+</body>
+</html>

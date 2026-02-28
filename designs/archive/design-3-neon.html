@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WODIS — Neon Sport Design</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  /* ── Reset & Base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #060609;
+    font-family: 'Outfit', sans-serif;
+    color: #F0F0F5;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 40px 20px;
+    gap: 40px;
+    flex-wrap: wrap;
+  }
+
+  /* ── Design Tokens ── */
+  :root {
+    --bg: #0A0A0F;
+    --surface: #141419;
+    --border: #2A2A33;
+    --text-primary: #F0F0F5;
+    --text-secondary: #7A7A85;
+    --volt: #CAFF33;
+    --volt-dim: rgba(202, 255, 51, 0.15);
+    --volt-glow: rgba(202, 255, 51, 0.4);
+    --cyan: #00E5FF;
+    --cyan-dim: rgba(0, 229, 255, 0.08);
+    --cyan-glow: rgba(0, 229, 255, 0.35);
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  /* ── Phone Frame ── */
+  .phone {
+    width: 390px;
+    min-height: 780px;
+    background: var(--bg);
+    border-radius: 40px;
+    border: 2px solid var(--border);
+    overflow: hidden;
+    position: relative;
+    box-shadow:
+      0 0 60px rgba(0,0,0,0.6),
+      0 0 1px 1px rgba(202,255,51,0.05),
+      inset 0 0 80px rgba(0,0,0,0.3);
+    flex-shrink: 0;
+  }
+
+  /* ── Notch ── */
+  .phone::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 150px;
+    height: 30px;
+    background: #000;
+    border-radius: 0 0 20px 20px;
+    z-index: 10;
+  }
+
+  /* ── Header with animated gradient ── */
+  .header {
+    position: relative;
+    padding: 52px 24px 0;
+    overflow: hidden;
+  }
+
+  .header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      135deg,
+      rgba(202,255,51,0.06) 0%,
+      transparent 40%,
+      rgba(0,229,255,0.04) 60%,
+      transparent 100%
+    );
+    background-size: 300% 300%;
+    animation: ambientGlow 8s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  @keyframes ambientGlow {
+    0%, 100% { background-position: 0% 50%; }
+    25% { background-position: 100% 0%; }
+    50% { background-position: 100% 100%; }
+    75% { background-position: 0% 100%; }
+  }
+
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  .back-arrow {
+    color: var(--text-secondary);
+    font-size: 20px;
+    cursor: pointer;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 16px;
+  }
+
+  .header-icon {
+    color: var(--text-secondary);
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  .exercise-name {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin: 8px 0 16px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    z-index: 1;
+  }
+
+  .tab {
+    flex: 1;
+    text-align: center;
+    padding: 12px 0;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    cursor: pointer;
+    position: relative;
+    transition: color 0.2s;
+  }
+
+  .tab.active {
+    color: var(--volt);
+  }
+
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 10%;
+    width: 80%;
+    height: 2px;
+    background: var(--volt);
+    border-radius: 2px;
+    box-shadow:
+      0 0 8px var(--volt-glow),
+      0 0 20px var(--volt-dim);
+  }
+
+  /* ── Content Area ── */
+  .content {
+    padding: 16px 20px 20px;
+  }
+
+  /* ── Suggestion Line ── */
+  .suggestion {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--cyan-dim);
+    border: 1px solid rgba(0,229,255,0.12);
+    border-radius: var(--radius-sm);
+    margin-bottom: 18px;
+    font-size: 12.5px;
+    color: var(--cyan);
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+
+  .suggestion-icon {
+    font-size: 14px;
+    opacity: 0.8;
+  }
+
+  /* ── Set Table ── */
+  .set-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .set-table thead th {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    padding: 0 0 10px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .set-table thead th:first-child {
+    text-align: left;
+    width: 42px;
+  }
+
+  .set-table thead th:nth-child(4) {
+    width: 36px;
+  }
+
+  .set-table thead th:nth-child(5) {
+    width: 32px;
+  }
+
+  .set-table tbody tr {
+    border-bottom: 1px solid rgba(42,42,51,0.5);
+    transition: background 0.15s;
+  }
+
+  .set-table tbody td {
+    padding: 12px 4px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+    vertical-align: middle;
+  }
+
+  .set-table tbody td:first-child {
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    padding-left: 2px;
+  }
+
+  .set-table tbody td .weight,
+  .set-table tbody td .reps {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Checkmark ── */
+  .check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .check.done {
+    background: rgba(202,255,51,0.12);
+    color: var(--volt);
+    text-shadow: 0 0 8px var(--volt-glow);
+    box-shadow: 0 0 6px var(--volt-dim);
+  }
+
+  .check.empty {
+    border: 1.5px solid var(--border);
+    color: transparent;
+  }
+
+  /* ── More Dots ── */
+  .more-dots {
+    color: var(--text-secondary);
+    font-size: 16px;
+    cursor: pointer;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    letter-spacing: 1px;
+  }
+
+  /* Remove bottom border from set row when drop-row follows */
+  .has-detail {
+    border-bottom: none !important;
+  }
+
+  .has-detail td {
+    padding-bottom: 4px !important;
+  }
+
+  /* Volt dot indicator for per-rep data */
+  .has-detail .more-dots::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -8px;
+    width: 6px;
+    height: 6px;
+    background: var(--volt);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--volt-glow);
+  }
+
+  /* ── Drop-set sub-row ── */
+  .drop-row {
+    border-bottom: 1px solid rgba(42,42,51,0.5);
+  }
+
+  .drop-row td {
+    padding-top: 0 !important;
+    padding-bottom: 10px !important;
+    font-size: 13px !important;
+  }
+
+  .drop-row td:first-child {
+    position: relative;
+  }
+
+  .drop-row td:first-child::before {
+    content: '↳';
+    position: absolute;
+    right: 2px;
+    top: 0;
+    font-size: 12px;
+    color: var(--cyan);
+    opacity: 0.6;
+  }
+
+  .drop-weight {
+    color: var(--cyan) !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    text-shadow: 0 0 6px var(--cyan-glow);
+  }
+
+  .drop-reps {
+    color: var(--cyan) !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    opacity: 0.8;
+  }
+
+  /* ── Current Input Row ── */
+  .input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 12px;
+    margin: 4px -4px 0;
+    border-left: 3px solid var(--volt);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    background: linear-gradient(90deg, var(--volt-dim), transparent 60%);
+    box-shadow: -2px 0 12px var(--volt-dim);
+  }
+
+  .input-row .set-num {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    min-width: 28px;
+  }
+
+  .input-field {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: 'Outfit', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 10px 8px;
+    text-align: center;
+    width: 72px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .input-field:focus,
+  .input-field.has-value {
+    border-color: var(--volt);
+    box-shadow: 0 0 6px var(--volt-dim);
+  }
+
+  .input-multiply {
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .input-check {
+    margin-left: auto;
+  }
+
+  /* ── Tags ── */
+  .tags {
+    display: flex;
+    gap: 8px;
+    margin: 16px 0;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    padding: 6px 14px;
+    border: 1px solid rgba(202,255,51,0.35);
+    border-radius: 20px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--volt);
+    cursor: pointer;
+    transition: all 0.2s;
+    background: rgba(202,255,51,0.04);
+  }
+
+  .tag:hover {
+    background: var(--volt-dim);
+  }
+
+  /* ── Add Set Button ── */
+  .add-set-btn {
+    width: 100%;
+    padding: 14px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .add-set-btn:hover {
+    border-color: var(--volt);
+    color: var(--volt);
+    background: var(--volt-dim);
+  }
+
+  .add-set-btn .plus {
+    font-size: 18px;
+    font-weight: 400;
+  }
+
+  /* ═══════════════════════════════════
+     SCREEN 2 — Per-Rep Detail
+     ═══════════════════════════════════ */
+
+  .detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 52px 24px 16px;
+    position: relative;
+  }
+
+  .detail-header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      135deg,
+      rgba(0,229,255,0.05) 0%,
+      transparent 50%,
+      rgba(202,255,51,0.04) 100%
+    );
+    background-size: 300% 300%;
+    animation: ambientGlow 8s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .detail-title {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    position: relative;
+    z-index: 1;
+  }
+
+  .detail-title .rep-count {
+    color: var(--volt);
+  }
+
+  .done-btn {
+    padding: 8px 22px;
+    background: var(--volt);
+    color: #0A0A0F;
+    border: none;
+    border-radius: 20px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 0 16px var(--volt-dim);
+    transition: box-shadow 0.2s;
+  }
+
+  .done-btn:hover {
+    box-shadow: 0 0 24px var(--volt-glow);
+  }
+
+  /* ── Rep Table ── */
+  .rep-content {
+    padding: 0 20px 20px;
+  }
+
+  .rep-table-header {
+    display: grid;
+    grid-template-columns: 44px 1fr 60px 32px;
+    gap: 4px;
+    padding: 0 0 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2px;
+  }
+
+  .rep-table-header span {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  .rep-table-header span:nth-child(2) {
+    text-align: center;
+  }
+
+  .rep-table-header span:nth-child(3) {
+    text-align: center;
+  }
+
+  .rep-table-header span:nth-child(4) {
+    text-align: center;
+  }
+
+  /* ── Rep Row ── */
+  .rep-row {
+    display: grid;
+    grid-template-columns: 44px 1fr 60px 32px;
+    gap: 4px;
+    align-items: center;
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(42,42,51,0.4);
+    position: relative;
+    transition: background 0.15s;
+  }
+
+  .rep-row.weight-changed {
+    background: var(--cyan-dim);
+    margin: 0 -20px;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .rep-num {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  .rep-weight-cell {
+    text-align: center;
+  }
+
+  .rep-weight {
+    font-size: 16px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rep-weight.changed {
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan-glow);
+  }
+
+  .rep-flags {
+    display: flex;
+    gap: 3px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .rep-flag {
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 3px 6px;
+    border-radius: 3px;
+    line-height: 1;
+  }
+
+  .rep-flag.assisted {
+    background: rgba(0,229,255,0.12);
+    color: var(--cyan);
+    border: 1px solid rgba(0,229,255,0.2);
+    text-shadow: 0 0 6px var(--cyan-glow);
+  }
+
+  .rep-flag.partial {
+    background: rgba(255,170,0,0.1);
+    color: #FFAA00;
+    border: 1px solid rgba(255,170,0,0.2);
+  }
+
+  .rep-flag.failure {
+    background: rgba(255,60,60,0.1);
+    color: #FF5252;
+    border: 1px solid rgba(255,60,60,0.2);
+  }
+
+  .rep-more {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  /* ── Flag Popover (Glassmorphism) ── */
+  .popover-anchor {
+    position: relative;
+  }
+
+  .flag-popover {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 4px;
+    z-index: 100;
+    min-width: 160px;
+    padding: 8px 0;
+    background: rgba(25, 25, 35, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(0,229,255,0.15);
+    border-radius: var(--radius);
+    box-shadow:
+      0 8px 32px rgba(0,0,0,0.5),
+      0 0 1px rgba(0,229,255,0.2),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+    overflow: hidden;
+  }
+
+  .flag-popover::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    right: 12px;
+    width: 10px;
+    height: 10px;
+    background: rgba(25, 25, 35, 0.85);
+    border-left: 1px solid rgba(0,229,255,0.15);
+    border-top: 1px solid rgba(0,229,255,0.15);
+    transform: rotate(45deg);
+  }
+
+  .popover-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .popover-item:hover {
+    background: rgba(0,229,255,0.08);
+  }
+
+  .popover-item .pi-icon {
+    font-size: 14px;
+    width: 20px;
+    text-align: center;
+  }
+
+  .popover-item.active {
+    color: var(--cyan);
+    text-shadow: 0 0 6px var(--cyan-glow);
+  }
+
+  .popover-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+  }
+
+  /* ── Label ── */
+  .screen-label {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-top: 16px;
+    opacity: 0.5;
+  }
+
+  /* ── Bottom Nav (visual) ── */
+  .bottom-nav {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 10px 24px 28px;
+    display: flex;
+    justify-content: space-around;
+    border-top: 1px solid var(--border);
+    background: rgba(10,10,15,0.95);
+  }
+
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  .nav-item.active {
+    color: var(--volt);
+  }
+
+  .nav-item .nav-icon {
+    font-size: 20px;
+  }
+
+  /* ── Scrollbar ── */
+  .phone-content {
+    overflow-y: auto;
+    height: calc(100% - 70px);
+  }
+
+  .phone-content::-webkit-scrollbar {
+    width: 0;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 860px) {
+    body {
+      flex-direction: column;
+      align-items: center;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 1 — Exercise Logging (New Tab)
+     ═══════════════════════════════════════════ -->
+<div>
+  <div class="phone">
+    <div class="phone-content">
+      <!-- Header -->
+      <div class="header">
+        <div class="header-top">
+          <span class="back-arrow">&#8592;</span>
+          <div class="header-actions">
+            <span class="header-icon">&#9734;</span>
+            <span class="header-icon">&#8942;</span>
+          </div>
+        </div>
+        <div class="exercise-name">Bench Press</div>
+        <!-- Tabs -->
+        <div class="tabs">
+          <div class="tab active">New</div>
+          <div class="tab">History</div>
+          <div class="tab">Graph</div>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="content">
+        <!-- Suggestion -->
+        <div class="suggestion">
+          <span class="suggestion-icon">&#9889;</span>
+          Suggested: 225 lbs (fatigue ~15%)
+        </div>
+
+        <!-- Set Table -->
+        <table class="set-table">
+          <thead>
+            <tr>
+              <th>Set</th>
+              <th>Lbs</th>
+              <th>Reps</th>
+              <th>&#10003;</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Set 1 -->
+            <tr>
+              <td>1</td>
+              <td><span class="weight">135</span></td>
+              <td><span class="reps">5</span></td>
+              <td><span class="check done">&#10003;</span></td>
+              <td><span class="more-dots">&#8943;</span></td>
+            </tr>
+            <!-- Set 2 -->
+            <tr>
+              <td>2</td>
+              <td><span class="weight">225</span></td>
+              <td><span class="reps">8</span></td>
+              <td><span class="check done">&#10003;</span></td>
+              <td><span class="more-dots">&#8943;</span></td>
+            </tr>
+            <!-- Set 3 -->
+            <tr>
+              <td>3</td>
+              <td><span class="weight">225</span></td>
+              <td><span class="reps">8</span></td>
+              <td><span class="check done">&#10003;</span></td>
+              <td><span class="more-dots">&#8943;</span></td>
+            </tr>
+            <!-- Set 4 — has per-rep data (dropset) -->
+            <tr class="has-detail">
+              <td>4</td>
+              <td><span class="weight">225</span></td>
+              <td><span class="reps">8</span></td>
+              <td><span class="check done">&#10003;</span></td>
+              <td><span class="more-dots">&#8943;</span></td>
+            </tr>
+            <tr class="drop-row">
+              <td></td>
+              <td><span class="weight drop-weight">185</span></td>
+              <td><span class="reps drop-reps">4</span></td>
+              <td></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Current Input Row -->
+        <div class="input-row">
+          <span class="set-num">5</span>
+          <input class="input-field has-value" type="text" value="225" readonly>
+          <span class="input-multiply">&times;</span>
+          <input class="input-field" type="text" value="" placeholder="&#8212;" readonly>
+          <span class="input-check">
+            <span class="check empty">&#10003;</span>
+          </span>
+        </div>
+
+        <!-- Tags -->
+        <div class="tags">
+          <span class="tag">AMRAP</span>
+          <span class="tag">Backoff</span>
+        </div>
+
+        <!-- Add Set -->
+        <button class="add-set-btn">
+          <span class="plus">+</span> Add Set
+        </button>
+      </div>
+    </div>
+
+    <!-- Bottom Nav -->
+    <div class="bottom-nav">
+      <div class="nav-item">
+        <span class="nav-icon">&#9776;</span>
+        Feed
+      </div>
+      <div class="nav-item active">
+        <span class="nav-icon">&#9883;</span>
+        Log
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">&#9779;</span>
+        Stats
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">&#9881;</span>
+        More
+      </div>
+    </div>
+  </div>
+  <div class="screen-label">Screen 1 &mdash; Exercise Logging</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 2 — Per-Rep Detail
+     ═══════════════════════════════════════════ -->
+<div>
+  <div class="phone">
+    <div class="phone-content">
+      <!-- Detail Header -->
+      <div class="detail-header">
+        <div class="detail-title">Set 4 &middot; <span class="rep-count">12 Reps</span></div>
+        <button class="done-btn">Done</button>
+      </div>
+
+      <!-- Rep List -->
+      <div class="rep-content">
+        <div class="rep-table-header">
+          <span>Rep</span>
+          <span>Lbs</span>
+          <span>Flags</span>
+          <span></span>
+        </div>
+
+        <!-- Reps 1-8: standard weight 225 -->
+        <div class="rep-row">
+          <span class="rep-num">1</span>
+          <div class="rep-weight-cell"><span class="rep-weight">225</span></div>
+          <div class="rep-flags"></div>
+          <div class="rep-more">&#8943;</div>
+        </div>
+
+        <div class="rep-row">
+          <span class="rep-num">2</span>
+          <div class="rep-weight-cell"><span class="rep-weight">225</span></div>
+          <div class="rep-flags"></div>
+          <div class="rep-more">&#8943;</div>
+        </div>
+
+        <div class="rep-row">
+          <span class="rep-num">3</span>
+          <div class="rep-weight-cell"><span class="rep-weight">225</span></div>
+          <div class="rep-flags"></div>
+          <div class="rep-more">&#8943;</div>
+        </div>
+
+        <div class="rep-row">
+          <span class="rep-num">4</span>
+          <div class="rep-weight-cell"><span class="rep-weight">225</span></div>
+          <div class="rep-flags"></div>
+          <div class="rep-more">&#8943;</div>
+        </div>
+
+        <div class="rep-row">
+          <span class="rep-num">5</span>
+          <div class="rep-weight-cell"><span class="rep-weight">225</span></div>
+          <div class="rep-flags"></div>
+          <div class="rep-more">&#8943;</div>
+        </div>
+
+        <div class="rep-row">
+          <span class="rep-num">6</span>
+          <div class="rep-weight-cell"><span class="rep-weight">225</span></div>
+          <div class="rep-flags"></div>
+          <div class="rep-more">&#8943;</div>
+        </div>
+
+        <div class="rep-row">
+          <span class="rep-num">7</span>
+          <div class="rep-weight-cell"><span class="rep-weight">225</span></div>
+          <div class="rep-flags"></div>
+          <div class="rep-more">&#8943;</div>
+        </div>
+
+        <div class="rep-row">
+          <span class="rep-num">8</span>
+          <div class="rep-weight-cell"><span class="rep-weight">225</span></div>
+          <div class="rep-flags"></div>
+          <div class="rep-more">&#8943;</div>
+        </div>
+
+        <!-- Reps 9-12: changed weight 185, cyan tint -->
+        <div class="rep-row weight-changed">
+          <span class="rep-num">9</span>
+          <div class="rep-weight-cell"><span class="rep-weight changed">185</span></div>
+          <div class="rep-flags"></div>
+          <div class="rep-more">&#8943;</div>
+        </div>
+
+        <div class="rep-row weight-changed">
+          <span class="rep-num">10</span>
+          <div class="rep-weight-cell"><span class="rep-weight changed">185</span></div>
+          <div class="rep-flags"></div>
+          <div class="rep-more">&#8943;</div>
+        </div>
+
+        <!-- Rep 11: assisted -->
+        <div class="rep-row weight-changed">
+          <span class="rep-num">11</span>
+          <div class="rep-weight-cell"><span class="rep-weight changed">185</span></div>
+          <div class="rep-flags">
+            <span class="rep-flag assisted">Assisted</span>
+          </div>
+          <div class="rep-more">&#8943;</div>
+        </div>
+
+        <!-- Rep 12: partial + failure, with popover -->
+        <div class="rep-row weight-changed popover-anchor">
+          <span class="rep-num">12</span>
+          <div class="rep-weight-cell"><span class="rep-weight changed">185</span></div>
+          <div class="rep-flags">
+            <span class="rep-flag partial">Partial</span>
+            <span class="rep-flag failure">Failure</span>
+          </div>
+          <div class="rep-more">&#8943;</div>
+
+          <!-- Flag Popover -->
+          <div class="flag-popover">
+            <div class="popover-item">
+              <span class="pi-icon">&#9878;</span> Normal
+            </div>
+            <div class="popover-item active">
+              <span class="pi-icon">&#10040;</span> Assisted
+            </div>
+            <div class="popover-divider"></div>
+            <div class="popover-item active">
+              <span class="pi-icon">&#9673;</span> Partial
+            </div>
+            <div class="popover-item active">
+              <span class="pi-icon">&#9888;</span> Failure
+            </div>
+            <div class="popover-divider"></div>
+            <div class="popover-item">
+              <span class="pi-icon">&#128337;</span> Paused
+            </div>
+            <div class="popover-item">
+              <span class="pi-icon">&#9889;</span> Forced
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Nav -->
+    <div class="bottom-nav">
+      <div class="nav-item">
+        <span class="nav-icon">&#9776;</span>
+        Feed
+      </div>
+      <div class="nav-item active">
+        <span class="nav-icon">&#9883;</span>
+        Log
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">&#9779;</span>
+        Stats
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">&#9881;</span>
+        More
+      </div>
+    </div>
+  </div>
+  <div class="screen-label">Screen 2 &mdash; Per-Rep Detail</div>
+</div>
+
+</body>
+</html>

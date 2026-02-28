@@ -1129,23 +1129,6 @@
     max-width: 280px;
   }
 
-  .onboarding-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: var(--volt);
-    color: var(--bg);
-    font-family: 'Outfit', sans-serif;
-    font-size: 24px;
-    font-weight: 900;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 20px;
-    box-shadow: 0 0 32px var(--volt-glow), 0 4px 16px rgba(0,0,0,0.4);
-    animation: fabPulse 3s ease-in-out infinite;
-  }
-
   .onboarding-text {
     font-size: 14px;
     font-weight: 500;
@@ -1159,19 +1142,19 @@
     font-weight: 700;
   }
 
-  .onboarding-dismiss {
-    padding: 10px 28px;
-    background: var(--volt);
-    color: var(--bg);
-    border: none;
-    border-radius: 20px;
-    font-family: 'Outfit', sans-serif;
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    cursor: pointer;
-    box-shadow: 0 0 16px var(--volt-dim);
+  .onboarding-arrow {
+    position: absolute;
+    bottom: 96px;
+    right: 60px;
+    color: var(--volt);
+    font-size: 28px;
+    animation: arrowBounce 1.2s ease-in-out infinite;
+    text-shadow: 0 0 12px var(--volt-glow);
+  }
+
+  @keyframes arrowBounce {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(4px, 4px); }
   }
 
   /* ── Mobile-friendly: fill viewport on small screens ── */
@@ -1478,15 +1461,14 @@
   <div class="hotspot-overlay" id="hotspot-overlay"></div>
   <button class="help-fab" id="help-fab" title="Show clickable areas">?</button>
 
-  <!-- Onboarding overlay — shown on first load -->
+  <!-- Onboarding overlay — shown on first load, dismissed by tapping the ? FAB -->
   <div class="onboarding-overlay" id="onboarding-overlay">
     <div class="onboarding-content">
-      <div class="onboarding-icon">?</div>
       <div class="onboarding-text">
         Tap the <strong>?</strong> button on every screen to see which parts of this prototype you can interact with.
       </div>
-      <button class="onboarding-dismiss" id="onboarding-dismiss">Got it</button>
     </div>
+    <div class="onboarding-arrow">&#8600;</div>
   </div>
 </div>
 
@@ -1615,6 +1597,10 @@
 
   fab.addEventListener('click', (e) => {
     e.stopPropagation();
+    // Dismiss onboarding if present
+    const onboarding = document.getElementById('onboarding-overlay');
+    if (onboarding) onboarding.remove();
+
     if (overlayVisible) {
       hideHotspots();
     } else {
@@ -1947,17 +1933,6 @@
     });
   });
 
-  // ── Onboarding: dismiss then show hotspots ──
-  document.getElementById('onboarding-dismiss')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    document.getElementById('onboarding-overlay').remove();
-    showHotspots();
-  });
-  document.getElementById('onboarding-overlay')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    document.getElementById('onboarding-overlay').remove();
-    showHotspots();
-  });
 </script>
 
 </body>

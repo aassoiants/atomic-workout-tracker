@@ -1,0 +1,20 @@
+{
+  "name": "Atomic",
+  "short_name": "Atomic",
+  "description": "Rep-grain workout logging. The rep is the atomic unit.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A0A0F",
+  "theme_color": "#0A0A0F",
+  "categories": ["health", "fitness", "productivity"],
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

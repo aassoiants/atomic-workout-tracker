@@ -40,7 +40,7 @@ const ctx = {
   importCsv() {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.csv,text/csv';
+    // No accept filter: Android reports CSVs under assorted MIME types and greys them out.
     input.onchange = async () => {
       const file = input.files && input.files[0];
       if (!file) return;

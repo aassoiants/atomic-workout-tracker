@@ -63,17 +63,23 @@ function esc(str) {
 function exerciseTonnage(ex) {
   return ex.sets.reduce((t, s) => t + setTonnage(s), 0);
 }
-function pushFlags(toks, g) {
-  if (g.assisted) toks.push(`<span class="shc-tok shc-flag">· ${g.assisted} assisted</span>`);
-  if (g.partial) toks.push(`<span class="shc-tok shc-flag">· ${g.partial} partial</span>`);
-  if (g.failed) toks.push(`<span class="shc-tok shc-flag shc-failed">· ${g.failed} failed</span>`);
+// Set qualifiers grouped in one bracket so they read as part of their set,
+// e.g. "40×12 (1 partial)" or "80×6 (2 assisted, 1 failed)".
+function flagsToken(g) {
+  const parts = [];
+  if (g.assisted) parts.push(`${g.assisted} assisted`);
+  if (g.partial) parts.push(`${g.partial} partial`);
+  if (g.failed) parts.push(`<span class="shc-failed">${g.failed} failed</span>`);
+  return parts.length ? `<span class="shc-tok shc-flag">(${parts.join(', ')})</span>` : '';
 }
 function setTokens(set) {
   const toks = [`<span class="shc-tok">${set.load}${X}${set.reps}</span>`];
-  pushFlags(toks, set);
+  const f = flagsToken(set);
+  if (f) toks.push(f);
   for (const d of set.drops) {
     toks.push(`<span class="shc-tok shc-drop">${DROP}${d.load}${X}${d.reps}</span>`);
-    pushFlags(toks, d);
+    const df = flagsToken(d);
+    if (df) toks.push(df);
   }
   return toks.join(' ');
 }

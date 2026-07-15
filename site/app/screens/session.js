@@ -3,7 +3,7 @@ import { h, clear } from '../dom.js';
 import { bottomNav, formatLongDate, formatTime, TRASH_ICON, sessionNoLabel } from '../ui.js';
 import {
   addExercise, finishSession, exerciseSetSummary, exerciseCounts,
-  sessionTonnage, sessionSetCount, sessionReps, sessionNumber,
+  sessionTonnage, sessionSetCount, sessionReps, sessionNumber, localISO,
 } from '../model.js';
 import { openSharePreview } from '../share.js';
 
@@ -21,7 +21,8 @@ export async function renderSession(ctx, sessionId) {
         h('span', { class: 'session-back', html: '&#8592;', onClick: () => ctx.router.go({ name: 'feed' }) }),
         h('div', { class: 'session-title-block' },
           h('span', { class: 'session-title' }, s.split_type || 'New Session'),
-          h('span', { class: 'session-date' }, `${sessionNoLabel(num)} · ${formatLongDate(s.started_at)}`)),
+          h('span', { class: 'session-date', title: 'Edit start time', onClick: () => editStartTime(ctx, doc) },
+            `${sessionNoLabel(num)} · ${formatLongDate(s.started_at)}`)),
         h('div', { class: 'session-header-actions' },
           h('button', { class: 'session-share', 'aria-label': 'Share session', title: 'Share session', html: SHARE_ICON, onClick: () => openSharePreview(ctx, doc) }),
           s.ended_at ? null : h('button', { class: 'done-btn', onClick: () => finishAndGo(ctx, doc) }, 'Done')))),
@@ -123,9 +124,9 @@ async function addExerciseFlow(ctx, doc) {
   const names = [...counts.keys()].sort((a, b) => (counts.get(b) - counts.get(a)) || a.localeCompare(b));
 
   openExercisePicker(names, (name) => {
-    addExercise(doc, name);
+    const ex = addExercise(doc, name);
     ctx.store.saveSession(doc);
-    ctx.router.go({ name: 'session', sessionId: doc.session.id });
+    ctx.router.go({ name: 'exercise', sessionId: doc.session.id, exerciseId: ex.id });
   });
 }
 
@@ -166,6 +167,36 @@ function openExercisePicker(names, onPick) {
   document.body.appendChild(overlay);
   renderList();
   setTimeout(() => input.focus(), 30);
+}
+
+// Edit the session's start time (WODIS session.started_at). The date shown in
+// the feed, the session number, and the card all derive from it live.
+function toLocalInputValue(iso) {
+  const d = new Date(iso);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function editStartTime(ctx, doc) {
+  const overlay = h('div', { class: 'picker-overlay', onClick: (e) => { if (e.target === overlay) overlay.remove(); } });
+  const input = h('input', { class: 'input-field time-input', type: 'datetime-local', value: toLocalInputValue(doc.session.started_at) });
+  const save = async () => {
+    const d = new Date(input.value);
+    if (isNaN(d)) return;
+    const s = doc.session;
+    s.started_at = localISO(d);
+    // Don't persist a session that lazy-save hasn't saved yet (boot would prune it).
+    if (s.exercises.length || (s.notes && s.notes.trim())) await ctx.store.saveSession(doc);
+    overlay.remove();
+    ctx.router.go({ name: 'session', sessionId: s.id });
+  };
+  overlay.append(h('div', { class: 'picker-sheet time-sheet' },
+    h('div', { class: 'picker-head' },
+      h('span', { class: 'picker-title' }, 'Session start'),
+      h('button', { class: 'picker-cancel', onClick: () => overlay.remove() }, 'Cancel')),
+    input,
+    h('button', { class: 'time-save', onClick: save }, 'Save')));
+  document.body.appendChild(overlay);
 }
 
 async function deleteExercise(ctx, doc, ex) {

@@ -250,6 +250,18 @@ body {
 .session-date { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
 .session-header-actions { display: flex; align-items: center; gap: 12px; }
 .session-back { color: var(--text-secondary); font-size: 22px; cursor: pointer; }
+.session-date { cursor: pointer; text-decoration: underline dotted rgba(122, 122, 133, 0.5); text-underline-offset: 3px; }
+
+/* ── Session start-time sheet ── */
+.time-sheet { max-width: 340px; }
+.time-sheet .time-input { width: 100%; text-align: left; color-scheme: dark; }
+.time-save {
+  width: 100%; margin-top: 12px; padding: 12px;
+  background: var(--volt); color: #0A0A0F;
+  border: none; border-radius: var(--radius-sm);
+  font-family: inherit; font-size: 12px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;
+  cursor: pointer; box-shadow: 0 0 10px var(--volt-dim);
+}
 
 .session-rollup {
   display: flex; gap: 28px;
@@ -376,6 +388,71 @@ body {
   cursor: pointer;
   box-shadow: 0 0 10px var(--volt-dim);
 }
+
+/* ── Exercise Log | History tabs ── */
+.ex-tabs {
+  display: flex; gap: 4px;
+  margin: 0 20px 10px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  flex: none;
+}
+.ex-tab {
+  flex: 1;
+  padding: 10px 0;
+  border: none; background: transparent;
+  font-family: inherit; font-size: 11px; font-weight: 800;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text-secondary);
+  border-radius: 9px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+.ex-tab.active {
+  color: #0A0A0F;
+  background: var(--volt);
+  box-shadow: 0 0 14px var(--volt-dim);
+}
+.ex-tab .count { font-weight: 700; margin-left: 6px; opacity: 0.65; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+
+.hist { padding: 4px 20px 20px; }
+.hist-lead {
+  font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text-secondary); margin: 12px 0 10px;
+}
+.hist-lead strong { color: var(--volt); }
+.hist-empty { color: var(--text-tertiary); font-size: 13px; font-style: italic; padding: 16px 0; }
+.hist-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 13px 15px;
+  margin-bottom: 10px;
+}
+.hist-card.latest { border-color: rgba(202, 255, 51, 0.35); box-shadow: 0 0 16px rgba(202, 255, 51, 0.06); }
+.hc-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.hc-when { font-size: 13px; font-weight: 700; }
+.hc-ago { font-size: 11px; font-weight: 500; color: var(--text-tertiary); margin-left: 8px; }
+.hc-latest-tag {
+  font-size: 9px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--volt); background: var(--volt-dim);
+  padding: 3px 8px; border-radius: 9px; white-space: nowrap;
+}
+.hc-sets {
+  display: flex; flex-wrap: wrap; gap: 6px 14px;
+  font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.5;
+}
+.hc-set { white-space: nowrap; }
+.hc-set .x { color: var(--text-tertiary); font-weight: 500; font-size: 12px; padding: 0 1px; }
+.hc-set .reps { color: var(--text-secondary); }
+.hc-set.top { color: var(--volt); text-shadow: 0 0 8px var(--volt-dim); }
+.hc-set.top .reps { color: var(--volt); opacity: 0.8; }
+.hc-flag { font-size: 12px; font-weight: 500; color: var(--text-secondary); white-space: nowrap; }
+.hc-failed { color: #FF5252; }
+.hc-drop { color: var(--cyan); font-weight: 600; font-size: 13px; text-shadow: 0 0 4px var(--cyan-glow); white-space: nowrap; }
+.hc-note { font-size: 11.5px; color: var(--text-tertiary); font-style: italic; margin-top: 8px; line-height: 1.4; }
 
 /* ── Import affordances + toast ── */
 .feed-head { display: flex; align-items: center; justify-content: space-between; padding: 0 24px 12px; }

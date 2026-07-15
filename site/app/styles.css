@@ -457,6 +457,7 @@ body {
 /* ── Import affordances + toast ── */
 .feed-head { display: flex; align-items: center; justify-content: space-between; padding: 0 24px 12px; }
 .feed-head .feed-label { padding: 0; }
+.feed-links { display: flex; gap: 16px; }
 .import-link {
   background: none; border: none; cursor: pointer;
   color: var(--cyan);

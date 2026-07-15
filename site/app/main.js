@@ -46,6 +46,17 @@ const ctx = {
       if (!file) return;
       try {
         const text = await file.text();
+        // A .wodis.json backup restores directly; anything else is the legacy CSV.
+        const head = text.trimStart();
+        if (head.startsWith('[') || head.startsWith('{')) {
+          const { restoreWodis } = await import('./export.js');
+          const { added, skipped } = await restoreWodis(store, text);
+          render();
+          toast(added
+            ? `Restored ${added} session${added !== 1 ? 's' : ''}${skipped ? ` · ${skipped} skipped` : ''}`
+            : 'Already up to date');
+          return;
+        }
         const { reconstruct } = await import('./reconstruct.js');
         const { docs, review } = reconstruct(text);
         const existing = await store.allSessions();
@@ -65,6 +76,10 @@ const ctx = {
       }
     };
     input.click();
+  },
+  async exportWodis() {
+    const { exportWodis } = await import('./export.js');
+    await exportWodis(store);
   },
 };
 

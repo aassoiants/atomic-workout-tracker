@@ -15,7 +15,9 @@ export async function renderFeed(ctx) {
       h('span', {}, '+'), ' Log New Session'),
     h('div', { class: 'feed-head' },
       h('div', { class: 'feed-label' }, 'Recent Sessions'),
-      h('button', { class: 'import-link', onClick: () => ctx.importCsv() }, 'Import CSV')),
+      h('div', { class: 'feed-links' },
+        h('button', { class: 'import-link', onClick: () => ctx.exportWodis() }, 'Export'),
+        h('button', { class: 'import-link', onClick: () => ctx.importCsv() }, 'Import'))),
   );
 
   if (!sessions.length) {
@@ -23,7 +25,7 @@ export async function renderFeed(ctx) {
       h('div', { class: 'empty-emoji', html: '&#9883;' }),
       h('div', {}, 'No sessions yet.'),
       h('div', { class: 'empty-sub' }, 'Tap Log New Session to start, or bring your history in.'),
-      h('button', { class: 'import-btn', onClick: () => ctx.importCsv() }, 'Import from CSV')));
+      h('button', { class: 'import-btn', onClick: () => ctx.importCsv() }, 'Import History')));
   } else {
     sessions.forEach((doc, i) => scroll.append(sessionCard(ctx, doc, sessions.length - i)));
   }

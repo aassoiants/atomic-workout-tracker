@@ -590,6 +590,21 @@ body {
 .popover-item.active { color: var(--cyan); text-shadow: 0 0 6px var(--cyan-glow); }
 .popover-divider { height: 1px; background: var(--border); margin: 4px 0; }
 
+/* ── Duration (timed) sets ── */
+.dur-cell { text-align: center; }
+.dur-row { gap: 5px; }
+.dur-row .set-num { min-width: 18px; }
+.dur-row .dur-field { width: 46px; padding: 10px 2px; }
+.dur-sep { color: var(--text-secondary); font-weight: 700; }
+.mode-toggle {
+  display: block; margin: 12px auto 0;
+  background: none; border: none;
+  color: var(--cyan);
+  font-family: inherit; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  cursor: pointer;
+  opacity: 0.85;
+}
+
 /* number inputs: strip spinners */
 .input-field::-webkit-outer-spin-button,
 .input-field::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }

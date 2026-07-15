@@ -38,6 +38,17 @@ export function formatTime(iso) {
   return `${h}:${min} ${ap}`;
 }
 
+// Duration in seconds → compact clock string: 30 → "0:30", 2700 → "45:00",
+// 3720 → "1:02:00".
+export function fmtDuration(sec) {
+  sec = Math.max(0, Math.round(Number(sec) || 0));
+  const hh = Math.floor(sec / 3600);
+  const mm = Math.floor((sec % 3600) / 60);
+  const ss = sec % 60;
+  const p = (n) => String(n).padStart(2, '0');
+  return hh ? `${hh}:${p(mm)}:${p(ss)}` : `${mm}:${p(ss)}`;
+}
+
 export function toast(msg) {
   let el = document.getElementById('toast');
   if (!el) {

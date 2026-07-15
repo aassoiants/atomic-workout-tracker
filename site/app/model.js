@@ -65,6 +65,25 @@ export function addSet(exercise, { load = 0, reps_completed = 0, set_type = null
   return set;
 }
 
+// ── Timed work (bike, run, battle ropes) ───────────────────────────────────
+// The spec has no first-class field for work duration (its duration fields are
+// rest/transition), so it rides in _extra — the spec's extension channel,
+// round-trip protected. A duration set carries no load and no reps.
+
+export function isDurationSet(set) {
+  return !!(set._extra && set._extra.atomic && set._extra.atomic.duration_seconds != null);
+}
+
+export function setDuration(set) {
+  return isDurationSet(set) ? Number(set._extra.atomic.duration_seconds) || 0 : 0;
+}
+
+export function addDurationSet(exercise, seconds) {
+  const set = { id: newId(), load: 0, reps_completed: 0, _extra: { atomic: { duration_seconds: Math.max(0, Math.round(seconds)) } } };
+  exercise.sets.push(set);
+  return set;
+}
+
 // Materialize per-rep data (dropsets, assisted/partial/failed reps).
 // reps: array of { load, assisted, partial, completed }.
 export function setReps(set, reps) {
@@ -139,6 +158,9 @@ export function sessionReps(doc) {
 // from `reps` and tonnage but surfaced as `failed`.
 // { load, reps, assisted, partial, failed, drops:[{load, reps, assisted, partial, failed}] }
 export function setSummary(set) {
+  if (isDurationSet(set)) {
+    return { load: 0, reps: 0, duration: setDuration(set), assisted: 0, partial: 0, failed: 0, drops: [] };
+  }
   const mainLoad = Number(set.load);
   if (!Array.isArray(set.reps) || !set.reps.length) {
     return { load: mainLoad, reps: Number(set.reps_completed) || 0, assisted: 0, partial: 0, failed: 0, drops: [] };

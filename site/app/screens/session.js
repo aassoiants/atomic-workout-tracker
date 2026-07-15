@@ -1,6 +1,6 @@
 // Session screen: note, exercise list with live summaries, timer, finish.
 import { h, clear } from '../dom.js';
-import { bottomNav, formatLongDate, formatTime, TRASH_ICON, sessionNoLabel } from '../ui.js';
+import { bottomNav, formatLongDate, formatTime, fmtDuration, TRASH_ICON, sessionNoLabel } from '../ui.js';
 import {
   addExercise, finishSession, exerciseSetSummary, exerciseCounts,
   sessionTonnage, sessionSetCount, sessionReps, sessionNumber, localISO,
@@ -86,10 +86,22 @@ function exerciseCard(ctx, doc, ex) {
   if (!summary.length) {
     summaryEl.append(h('span', { class: 'ec-empty' }, 'No sets logged'));
   } else {
-    summary.forEach((set, i) => {
+    // Runs of equal durations collapse to one token ("8 × 0:20").
+    const toks = [];
+    summary.forEach((set) => {
+      if (set.duration) {
+        const last = toks[toks.length - 1];
+        if (last && last.dur === set.duration) { last.n += 1; return; }
+        toks.push({ dur: set.duration, n: 1 });
+      } else {
+        toks.push({ set });
+      }
+    });
+    toks.forEach((t, i) => {
       if (i) summaryEl.append(', ');
-      summaryEl.append(`${set.load}×${set.reps}`);
-      set.drops.forEach((d) => summaryEl.append(h('span', { class: 'ec-drop' }, ` ↳${d.load}×${d.reps}`)));
+      if (t.dur != null) { summaryEl.append((t.n > 1 ? `${t.n} × ` : '') + fmtDuration(t.dur)); return; }
+      summaryEl.append(`${t.set.load}×${t.set.reps}`);
+      t.set.drops.forEach((d) => summaryEl.append(h('span', { class: 'ec-drop' }, ` ↳${d.load}×${d.reps}`)));
     });
   }
   let countLabel = `${sets} set${sets !== 1 ? 's' : ''}`;

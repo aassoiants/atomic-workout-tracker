@@ -5,7 +5,7 @@
 import { createSession, addExercise, newId, localISO } from './model.js';
 
 export function reconstruct(text, { load_unit = 'lbs', preview = false } = {}) {
-  const sessions = groupSessions(extractStrengthRows(text));
+  const sessions = groupSessions([...extractStrengthRows(text), ...extractCardioRows(text)]);
   const review = {
     sessions: sessions.length, exercises: 0,
     dropsetsMerged: 0, mgSeq: 0, partialReps: 0, assistedReps: 0, assistLoadSets: 0,
@@ -54,6 +54,29 @@ function extractStrengthRows(text) {
   return rows;
 }
 
+// The -----Cardio----- section has its own columns:
+// Date,Time,Exercise,Duration,Distance,Heart Rate,Calories,Notes
+function extractCardioRows(text) {
+  const rows = [];
+  let inCardio = false;
+  const num = (v) => { const n = parseFloat(v); return isNaN(n) ? null : n; };
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (line.startsWith('-----')) { inCardio = /cardio/i.test(line); continue; }
+    if (!inCardio) continue;
+    const f = parseCsvLine(line);
+    if (f[0] === 'Date' && f[2] === 'Exercise') continue;
+    if (f.length < 4 || !f[2]) continue;
+    const extras = {};
+    if (num(f[4]) != null) extras.distance = num(f[4]);
+    if (num(f[5]) != null) extras.heart_rate = num(f[5]);
+    if (num(f[6]) != null) extras.calories = num(f[6]);
+    rows.push({ date: f[0], time: f[1] || '0:0', exercise: f[2], reps: '', weight: '', note: (f[7] || '').trim(), duration: parseDuration(f[3]), extras });
+  }
+  return rows;
+}
+
 function groupSessions(rows) {
   const byDate = new Map();
   for (const r of rows) {
@@ -63,7 +86,12 @@ function groupSessions(rows) {
     if (!insts.has(key)) insts.set(key, { date: r.date, exercise: r.exercise, iso: toISO(r.date, r.time), note: '', sets: [] });
     const inst = insts.get(key);
     if (r.note && !inst.note) inst.note = r.note;
-    inst.sets.push({ load: parseFloat(r.weight) || 0, reps: parseInt(r.reps, 10) || 0 });
+    inst.sets.push({
+      load: parseFloat(r.weight) || 0,
+      reps: parseInt(r.reps, 10) || 0,
+      duration: r.duration != null ? r.duration : parseDuration(r.reps),
+      extras: r.extras,
+    });
   }
   const out = [];
   for (const [date, insts] of byDate) out.push({ date, instances: [...insts.values()].sort((a, b) => (a.iso || '').localeCompare(b.iso || '')) });
@@ -99,9 +127,13 @@ function toISO(dateStr, timeStr) {
 
 function buildExercise(inst, review) {
   const exname = inst.exercise;
-  const raw = inst.sets.map((s) => ({ load: s.load, reps: s.reps }));
+  const raw = inst.sets.map((s) => ({ load: s.load, reps: s.reps, duration: s.duration, extras: s.extras }));
   const extra = {};
   let note = inst.note || '';
+
+  // Timed work (the old tracker stored HH:MM:SS in the reps column): duration
+  // sets, no note parsing — cardio notes are things like heart rate, kept verbatim.
+  if (raw.some((s) => s.duration)) return { sets: durationSets(raw), extra };
 
   // tempo (T44 / T4-4 / Tempo 4-4) — capture and strip so it can't be mistaken for a range
   const tempo = note.match(/\bt\s*(\d)\s*-?\s*(\d)\b/i) || note.match(/tempo\s*(\d)\s*-?\s*(\d)/i);
@@ -155,6 +187,18 @@ function buildExercise(inst, review) {
 
 const seg = (load, reps) => ({ load, reps, flags: new Array(Math.max(0, reps)).fill(null) });
 const simpleSets = (raw) => raw.map((s) => ({ id: newId(), load: s.load, reps_completed: s.reps }));
+
+// "00:00:30" → 30; anything that isn't H:MM:SS (or HH:MM:SS) → null.
+function parseDuration(str) {
+  const m = /^(\d{1,2}):(\d{2}):(\d{2})$/.exec(String(str || '').trim());
+  if (!m) return null;
+  const secs = (+m[1]) * 3600 + (+m[2]) * 60 + (+m[3]);
+  return secs > 0 ? secs : null;
+}
+
+const durationSets = (raw) => raw.map((s) => (s.duration
+  ? { id: newId(), load: 0, reps_completed: 0, _extra: { atomic: { duration_seconds: s.duration, ...(s.extras || {}) } } }
+  : { id: newId(), load: s.load, reps_completed: s.reps }));
 const setsStr = (sets) => sets.map((s) => s.load + 'x' + s.reps).join(', ');
 
 function segsToSets(items) {

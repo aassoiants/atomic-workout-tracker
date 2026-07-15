@@ -4,7 +4,7 @@
 // (external stylesheets don't apply inside an <svg><foreignObject>).
 import { h } from './dom.js';
 import { sessionTonnage, sessionSetCount, sessionReps, sessionNumber, setTonnage, exerciseSetSummary } from './model.js';
-import { toast } from './ui.js';
+import { toast, fmtDuration } from './ui.js';
 
 const X = '×';      // ×
 const DROP = '↳';   // ↳
@@ -86,7 +86,20 @@ function setTokens(set) {
 function exSetsHtml(ex) {
   const summary = exerciseSetSummary(ex);
   if (!summary.length) return '<span class="shc-empty">No sets logged</span>';
-  return summary.map(setTokens).join(', ');
+  // Runs of equal durations collapse to one token ("8 × 0:20").
+  const out = [];
+  for (const g of summary) {
+    if (g.duration) {
+      const last = out[out.length - 1];
+      if (last && last.dur === g.duration) { last.n += 1; continue; }
+      out.push({ dur: g.duration, n: 1 });
+    } else {
+      out.push({ html: setTokens(g) });
+    }
+  }
+  return out
+    .map((o) => (o.dur != null ? `<span class="shc-tok">${o.n > 1 ? o.n + ' ' + X + ' ' : ''}${fmtDuration(o.dur)}</span>` : o.html))
+    .join(', ');
 }
 
 // Build the share-card element from a WODIS doc. `number` is the optional

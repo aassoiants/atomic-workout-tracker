@@ -59,17 +59,27 @@ const ctx = {
         }
         const { reconstruct } = await import('./reconstruct.js');
         const { docs, review } = reconstruct(text);
-        const existing = await store.allSessions();
-        const have = new Set(existing.map((d) => d.session.started_at.slice(0, 10)));
+        // Re-importing refreshes sessions that came from the CSV (they're
+        // deterministic from the file); manually logged sessions are never touched.
+        const byDate = new Map();
+        for (const d of await store.allSessions()) {
+          const k = d.session.started_at.slice(0, 10);
+          if (!byDate.has(k)) byDate.set(k, []);
+          byDate.get(k).push(d);
+        }
         let added = 0;
+        let refreshed = 0;
         for (const doc of docs) {
-          if (have.has(doc.session.started_at.slice(0, 10))) continue;
+          const same = byDate.get(doc.session.started_at.slice(0, 10)) || [];
+          const olds = same.filter((d) => d.meta && d.meta.source === 'imported-csv');
+          if (same.length && !olds.length) continue;
+          for (const old of olds) await store.deleteSession(old.session.id);
           await store.saveSession(doc);
-          added += 1;
+          if (olds.length) refreshed += 1; else added += 1;
         }
         render();
-        toast(added
-          ? `Imported ${added} session${added !== 1 ? 's' : ''} · ${review.dropsetsMerged} dropsets · ${review.flagged.length} to review`
+        toast(added + refreshed
+          ? `Import: ${added} new · ${refreshed} refreshed · ${review.flagged.length} to review`
           : 'Already up to date');
       } catch (err) {
         toast('Import failed: ' + (err && err.message ? err.message : err));

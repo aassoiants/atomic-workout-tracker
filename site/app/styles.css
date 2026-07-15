@@ -3,6 +3,9 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* The hidden attribute must win over any display rule (flex grids etc.). */
+[hidden] { display: none !important; }
+
 :root {
   --bg: #0A0A0F;
   --surface: #141419;

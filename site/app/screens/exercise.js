@@ -260,7 +260,22 @@ function summarizeExposure(past) {
     dirty: !!(flags.assisted || flags.partial || flags.failed),
     flags,
     hadLighter: groups.length > at.length,
+    all: groups.map((g) => ({ load: g.load, reps: g.reps })),
   };
+}
+
+// All of an exposure's sets the way a person would say them:
+// "100×12, 120×12 and 120×10" or "3 sets of 185×8".
+function humanSets(all) {
+  const grouped = [];
+  for (const s of all) {
+    const prev = grouped[grouped.length - 1];
+    if (prev && prev.load === s.load && prev.reps === s.reps) { prev.count += 1; continue; }
+    grouped.push({ load: s.load, reps: s.reps, count: 1 });
+  }
+  const words = grouped.map((g) => (g.count > 1 ? `${g.count} sets of ${g.load}×${g.reps}` : `${g.load}×${g.reps}`));
+  if (words.length <= 1) return words[0] || '';
+  return words.slice(0, -1).join(', ') + ' and ' + words[words.length - 1];
 }
 
 // Smallest load step ever actually made on this exercise (fallback 5).
@@ -295,10 +310,9 @@ function computeNext(hist) {
   if (!exposures.length) return null; // duration-only history: the cards speak for themselves
 
   const last = exposures[0];
-  // Sets in the app's own notation ("120×12, 120×10"), naming only the top
-  // weight the rule reasons about; lighter ramp-up sets are called out as such.
-  const setsStr = last.e.reps.map((r) => `${last.e.top}×${r}`).join(', ');
-  const where = last.e.hadLighter ? `Your heaviest sets last time: ${setsStr}` : `Last time: ${setsStr}`;
+  // Narrate every set the way a person would say it; the rule still judges
+  // only the top weight, and the sentence says so when lighter sets exist.
+  const did = `You did ${humanSets(last.e.all)}`;
   const ago = agoLabel(last.when);
 
   if (exposures.length < 3) {
@@ -318,18 +332,18 @@ function computeNext(hist) {
     return { label: 'Hold', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, reason: `${Math.round(gapDays / 7)} weeks since you last did this. Strength holds about 4 weeks, so repeat it once before advancing.` };
   }
   if (last.e.dirty) {
-    return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, reason: `${where}, including ${flagsPhrase(last.e.flags)}. Earn it clean first.` };
+    return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, reason: `${did}, but the ${last.e.top} sets included ${flagsPhrase(last.e.flags)}. Earn it clean first.` };
   }
   if (last.e.reps.every((r) => r >= target)) {
-    return { label: 'Progress', value: `${last.e.top + inc} × ${target}`, load: last.e.top + inc, reps: target, reason: `${where}, all clean, ${ago}. Time to move up.` };
+    return { label: 'Progress', value: `${last.e.top + inc} × ${target}`, load: last.e.top + inc, reps: target, reason: `${did}, all clean, ${ago}. Every set at ${last.e.top} hit ${target} reps, so move up.` };
   }
   const p1 = exposures[1];
   const p2 = exposures[2];
   if (p1 && p2 && p1.e.top === last.e.top && p2.e.top === last.e.top
       && last.e.totalReps < p1.e.totalReps && p1.e.totalReps < p2.e.totalReps) {
-    return { label: 'Step back', value: `${last.e.top - inc} × ${target}`, load: last.e.top - inc, reps: target, reason: `Total reps at ${last.e.top} have slid three sessions running: ${p2.e.totalReps}, then ${p1.e.totalReps}, then ${last.e.totalReps}. Step back and rebuild.` };
+    return { label: 'Step back', value: `${last.e.top - inc} × ${target}`, load: last.e.top - inc, reps: target, reason: `Your total reps at ${last.e.top} have dropped three sessions in a row: ${p2.e.totalReps}, then ${p1.e.totalReps}, then ${last.e.totalReps}. Step back and rebuild.` };
   }
-  return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, reason: `${where}. Clean, but the target is ${target} reps on every set.` };
+  return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, reason: `${did}. The target at ${last.e.top}${last.e.hadLighter ? ', your top weight,' : ''} is ${target} reps on every set. Not quite there, so run it back.` };
 }
 
 function nextCard(n) {

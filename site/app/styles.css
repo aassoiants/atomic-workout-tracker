@@ -355,6 +355,11 @@ body {
 .set-delete { color: var(--text-tertiary); font-size: 18px; cursor: pointer; user-select: none; }
 .set-delete:hover { color: #FF5252; }
 
+/* Planned (ghost) rows laid out by Apply: visibly not-yet-facts */
+.ghost-row { border-bottom: 1px dashed rgba(42, 42, 51, 0.7) !important; }
+.ghost-row td { color: var(--text-tertiary) !important; font-style: italic; }
+.ghost-log { color: var(--cyan); font-size: 16px; font-style: normal; cursor: pointer; user-select: none; text-shadow: 0 0 6px var(--cyan-glow); }
+
 .input-row {
   display: flex; align-items: center; gap: 8px;
   padding: 14px 12px;

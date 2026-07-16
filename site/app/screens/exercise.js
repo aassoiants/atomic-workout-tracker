@@ -17,14 +17,38 @@ export async function renderExercise(ctx, sessionId, exerciseId) {
   const { pane: histPane, count: histCount, lastPast, next } = await buildHistoryPane(ctx, doc, ex, (n) => applySuggestion(n));
   histPane.hidden = true;
 
-  // Apply: load the suggestion into the input row and jump to the Log tab.
-  // The record is untouched until a set is actually logged.
+  // Apply: load the suggestion into the input row, lay out planned rows at
+  // the exercise's usual set count, and jump to the Log tab. Plans are
+  // scaffolding, not sets: a row becomes a fact only when confirmed (✓) or
+  // logged, and unconfirmed rows are stripped when the session finishes.
   function applySuggestion(n) {
     if (durationMode) { durationMode = false; applyMode(); }
     if (n.load != null) weightInput.value = String(n.load);
     if (n.reps != null) repsInput.value = String(n.reps);
+    if (n.load != null && n.reps != null && n.planSets) {
+      ex._extra = ex._extra || {};
+      ex._extra.atomic = ex._extra.atomic || {};
+      ex._extra.atomic.plan = { load: n.load, reps: n.reps, total: Math.max(n.planSets, ex.sets.length + 1) };
+      ctx.store.saveSession(doc);
+      renderBody();
+    }
     switchTab(false);
     repsInput.select();
+  }
+
+  function currentPlan() {
+    return (ex._extra && ex._extra.atomic && ex._extra.atomic.plan) || null;
+  }
+
+  async function confirmPlanned() {
+    const plan = currentPlan();
+    if (!plan) return;
+    addSet(ex, { load: plan.load, reps_completed: plan.reps });
+    stampSuggestion();
+    if (ex.sets.length >= plan.total) delete ex._extra.atomic.plan;
+    await ctx.store.saveSession(doc);
+    renderBody();
+    updateSetNums();
   }
 
   // Prediction ledger: the first time a set is logged, stamp the suggestion
@@ -103,6 +127,26 @@ export async function renderExercise(ctx, sessionId, exerciseId) {
         h('td', {}),
         h('td', {}))));
     });
+
+    // Planned rows from Apply: dim scaffolding below the real sets. The top
+    // one confirms with ✓; logging through the input row consumes them too.
+    const plan = currentPlan();
+    if (plan) {
+      const remaining = plan.total - ex.sets.length;
+      if (remaining <= 0) {
+        delete ex._extra.atomic.plan;
+        ctx.store.saveSession(doc);
+      } else {
+        for (let g = 0; g < remaining; g++) {
+          tbody.append(h('tr', { class: 'ghost-row' },
+            h('td', { class: 'set-num-cell' }, String(ex.sets.length + g + 1)),
+            h('td', {}, String(plan.load)),
+            h('td', {}, String(plan.reps)),
+            h('td', {}),
+            h('td', {}, g === 0 ? h('span', { class: 'ghost-log', html: '&#10003;', title: 'Did it as planned', onClick: confirmPlanned }) : null)));
+        }
+      }
+    }
   }
 
   const setNumW = h('span', { class: 'set-num' }, '');
@@ -329,6 +373,10 @@ function computeNext(hist) {
     return { label: 'Low confidence', value: null, reason: `Only ${exposures.length} session${exposures.length !== 1 ? 's' : ''} on record, too little history to suggest. Log what's real.` };
   }
 
+  // Typical set count for this exercise (modal across recent exposures),
+  // used by Apply to lay out planned rows.
+  const planSets = mode(exposures.slice(0, 6).map((x) => x.e.all.length)) || last.e.all.length;
+
   const inc = learnIncrement(exposures);
   const cleanMaxes = exposures.slice(0, 6).filter((x) => !x.e.dirty).map((x) => Math.max(...x.e.reps));
   const target = mode(cleanMaxes) || Math.max(...last.e.reps);
@@ -339,21 +387,21 @@ function computeNext(hist) {
     return { label: 'Restart light', value: `~${load}`, load, reason: `${Math.round(gapDays / 7)} weeks since you last did this. Old numbers go stale, so start easy. You'll be back fast. (Layoff sizing is a heuristic, not tested evidence.)` };
   }
   if (gapDays > 28) {
-    return { label: 'Hold', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, wild: last.e.top + inc, reason: `${Math.round(gapDays / 7)} weeks since you last did this. Strength holds about 4 weeks, so repeat it once before advancing.` };
+    return { label: 'Hold', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, planSets, wild: last.e.top + inc, reason: `${Math.round(gapDays / 7)} weeks since you last did this. Strength holds about 4 weeks, so repeat it once before advancing.` };
   }
   if (last.e.dirty) {
-    return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, reason: `${did}, but the ${last.e.top} sets included ${flagsPhrase(last.e.flags)}. Earn it clean first.` };
+    return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, planSets, reason: `${did}, but the ${last.e.top} sets included ${flagsPhrase(last.e.flags)}. Earn it clean first.` };
   }
   if (last.e.reps.every((r) => r >= target)) {
-    return { label: 'Progress', value: `${last.e.top + inc} × ${target}`, load: last.e.top + inc, reps: target, reason: `${did}, all clean, ${ago}. Every set at ${last.e.top} hit ${target} reps, so move up.` };
+    return { label: 'Progress', value: `${last.e.top + inc} × ${target}`, load: last.e.top + inc, reps: target, planSets, reason: `${did}, all clean, ${ago}. Every set at ${last.e.top} hit ${target} reps, so move up.` };
   }
   const p1 = exposures[1];
   const p2 = exposures[2];
   if (p1 && p2 && p1.e.top === last.e.top && p2.e.top === last.e.top
       && last.e.totalReps < p1.e.totalReps && p1.e.totalReps < p2.e.totalReps) {
-    return { label: 'Step back', value: `${last.e.top - inc} × ${target}`, load: last.e.top - inc, reps: target, reason: `Your total reps at ${last.e.top} have dropped three sessions in a row: ${p2.e.totalReps}, then ${p1.e.totalReps}, then ${last.e.totalReps}. Step back and rebuild.` };
+    return { label: 'Step back', value: `${last.e.top - inc} × ${target}`, load: last.e.top - inc, reps: target, planSets, reason: `Your total reps at ${last.e.top} have dropped three sessions in a row: ${p2.e.totalReps}, then ${p1.e.totalReps}, then ${last.e.totalReps}. Step back and rebuild.` };
   }
-  return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, wild: last.e.top + inc, reason: `${did}. The target at ${last.e.top}${last.e.hadLighter ? ', your top weight,' : ''} is ${target} reps on every set. Not quite there, so run it back.` };
+  return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, planSets, wild: last.e.top + inc, reason: `${did}. The target at ${last.e.top}${last.e.hadLighter ? ', your top weight,' : ''} is ${target} reps on every set. Not quite there, so run it back.` };
 }
 
 // Design D: scoreboard verdict + wildcard permission line + Apply.

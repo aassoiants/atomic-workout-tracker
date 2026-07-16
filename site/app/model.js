@@ -102,6 +102,10 @@ function normalizeRep(r, fallbackLoad) {
 
 export function finishSession(doc) {
   if (!doc.session.ended_at) doc.session.ended_at = nowISO();
+  // Planned rows are scaffolding, never facts; they don't outlive the session.
+  for (const ex of doc.session.exercises) {
+    if (ex._extra && ex._extra.atomic && ex._extra.atomic.plan) delete ex._extra.atomic.plan;
+  }
   return doc;
 }
 

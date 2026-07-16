@@ -163,7 +163,7 @@ function openExercisePicker(names, onPick) {
       list.append(h('div', { class: 'picker-item picker-new', onClick: () => pick(input.value) }, `+ Add “${input.value.trim()}”`));
     }
     matches.forEach((n) => list.append(h('div', { class: 'picker-item', onClick: () => pick(n) }, n)));
-    if (!matches.length && !q) list.append(h('div', { class: 'picker-empty' }, 'No exercises logged yet — type one to add it.'));
+    if (!matches.length && !q) list.append(h('div', { class: 'picker-empty' }, 'No exercises logged yet. Type one to add it.'));
   };
 
   input.addEventListener('input', renderList);

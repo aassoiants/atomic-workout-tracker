@@ -240,9 +240,9 @@ async function copyImage(card) {
     const blob = await withFullRes(card, () => captureBlob(card));
     if (!navigator.clipboard || !window.ClipboardItem) throw new Error('clipboard unavailable');
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-    toast('Image copied — paste it into your chat');
+    toast('Image copied. Paste it into your chat');
   } catch (_) {
-    toast('Copy not supported here — use Download');
+    toast('Copy not supported here. Use Download');
   }
 }
 

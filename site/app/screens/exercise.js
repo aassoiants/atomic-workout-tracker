@@ -294,11 +294,11 @@ function computeNext(hist) {
   if (!exposures.length) return null; // duration-only history: the cards speak for themselves
 
   const last = exposures[0];
-  const repsStr = last.e.reps.join('/');
+  const repsStr = last.e.reps.join(', ');
   const ago = agoLabel(last.when);
 
   if (exposures.length < 3) {
-    return { label: 'Low confidence', value: null, reason: `Only ${exposures.length} session${exposures.length !== 1 ? 's' : ''} on record — too little history to suggest. Log what's real.` };
+    return { label: 'Low confidence', value: null, reason: `Only ${exposures.length} session${exposures.length !== 1 ? 's' : ''} on record, too little history to suggest. Log what's real.` };
   }
 
   const inc = learnIncrement(exposures);
@@ -308,24 +308,24 @@ function computeNext(hist) {
 
   if (gapDays > 84) {
     const load = Math.max(inc, Math.round((last.e.top * 0.85) / inc) * inc);
-    return { label: 'Restart light', value: `~${load}`, load, reason: `${Math.round(gapDays / 7)} weeks since last exposure — old numbers are stale; start easy, you'll be back fast. (Heuristic: layoff rules aren't evidence-backed.)` };
+    return { label: 'Restart light', value: `~${load}`, load, reason: `${Math.round(gapDays / 7)} weeks since you last did this. Old numbers go stale, so start easy. You'll be back fast. (Layoff sizing is a heuristic, not tested evidence.)` };
   }
   if (gapDays > 28) {
-    return { label: 'Hold', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, reason: `${Math.round(gapDays / 7)} weeks since last exposure — strength holds about 4 weeks; repeat before advancing.` };
+    return { label: 'Hold', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, reason: `${Math.round(gapDays / 7)} weeks since you last did this. Strength holds about 4 weeks, so repeat it once before advancing.` };
   }
   if (last.e.dirty) {
-    return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, reason: `Last time at ${last.e.top} had ${flagsPhrase(last.e.flags)} — earn it clean first.` };
+    return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, reason: `Last time at ${last.e.top} had ${flagsPhrase(last.e.flags)}. Earn it clean first.` };
   }
   if (last.e.reps.every((r) => r >= target)) {
-    return { label: 'Progress', value: `${last.e.top + inc} × ${target}`, load: last.e.top + inc, reps: target, reason: `${last.e.top}: ${repsStr} clean, ${ago}.` };
+    return { label: 'Progress', value: `${last.e.top + inc} × ${target}`, load: last.e.top + inc, reps: target, reason: `Last time at ${last.e.top} you hit ${repsStr} reps, all clean, ${ago}. Time to move up.` };
   }
   const p1 = exposures[1];
   const p2 = exposures[2];
   if (p1 && p2 && p1.e.top === last.e.top && p2.e.top === last.e.top
       && last.e.totalReps < p1.e.totalReps && p1.e.totalReps < p2.e.totalReps) {
-    return { label: 'Step back', value: `${last.e.top - inc} × ${target}`, load: last.e.top - inc, reps: target, reason: `${last.e.top} has slid two sessions running (${p2.e.reps.join('/')} → ${p1.e.reps.join('/')} → ${repsStr}) — step back, rebuild.` };
+    return { label: 'Step back', value: `${last.e.top - inc} × ${target}`, load: last.e.top - inc, reps: target, reason: `${last.e.top} has slid two sessions running (${p2.e.reps.join(', ')} then ${p1.e.reps.join(', ')} then ${repsStr}). Step back and rebuild.` };
   }
-  return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, reason: `${last.e.top}: ${repsStr} clean but under the ${target}-rep target — repeat.` };
+  return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, reason: `Last time at ${last.e.top} you got ${repsStr} reps, clean, but the target is ${target} on every set.` };
 }
 
 function nextCard(n) {

@@ -259,6 +259,7 @@ function summarizeExposure(past) {
     totalReps: at.reduce((n, g) => n + g.reps, 0),
     dirty: !!(flags.assisted || flags.partial || flags.failed),
     flags,
+    hadLighter: groups.length > at.length,
   };
 }
 
@@ -281,9 +282,9 @@ function mode(nums) {
 
 function flagsPhrase(f) {
   const parts = [];
-  if (f.assisted) parts.push(`${f.assisted} assisted`);
-  if (f.partial) parts.push(`${f.partial} partial`);
-  if (f.failed) parts.push(`${f.failed} failed`);
+  if (f.assisted) parts.push(`${f.assisted} assisted rep${f.assisted !== 1 ? 's' : ''}`);
+  if (f.partial) parts.push(`${f.partial} partial${f.partial !== 1 ? 's' : ''}`);
+  if (f.failed) parts.push(`${f.failed} failed rep${f.failed !== 1 ? 's' : ''}`);
   return parts.join(', ');
 }
 
@@ -294,7 +295,10 @@ function computeNext(hist) {
   if (!exposures.length) return null; // duration-only history: the cards speak for themselves
 
   const last = exposures[0];
-  const repsStr = last.e.reps.join(', ');
+  // Sets in the app's own notation ("120×12, 120×10"), naming only the top
+  // weight the rule reasons about; lighter ramp-up sets are called out as such.
+  const setsStr = last.e.reps.map((r) => `${last.e.top}×${r}`).join(', ');
+  const where = last.e.hadLighter ? `Your heaviest sets last time: ${setsStr}` : `Last time: ${setsStr}`;
   const ago = agoLabel(last.when);
 
   if (exposures.length < 3) {
@@ -314,18 +318,18 @@ function computeNext(hist) {
     return { label: 'Hold', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, reason: `${Math.round(gapDays / 7)} weeks since you last did this. Strength holds about 4 weeks, so repeat it once before advancing.` };
   }
   if (last.e.dirty) {
-    return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, reason: `Last time at ${last.e.top} had ${flagsPhrase(last.e.flags)}. Earn it clean first.` };
+    return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, reason: `${where}, including ${flagsPhrase(last.e.flags)}. Earn it clean first.` };
   }
   if (last.e.reps.every((r) => r >= target)) {
-    return { label: 'Progress', value: `${last.e.top + inc} × ${target}`, load: last.e.top + inc, reps: target, reason: `Last time at ${last.e.top} you hit ${repsStr} reps, all clean, ${ago}. Time to move up.` };
+    return { label: 'Progress', value: `${last.e.top + inc} × ${target}`, load: last.e.top + inc, reps: target, reason: `${where}, all clean, ${ago}. Time to move up.` };
   }
   const p1 = exposures[1];
   const p2 = exposures[2];
   if (p1 && p2 && p1.e.top === last.e.top && p2.e.top === last.e.top
       && last.e.totalReps < p1.e.totalReps && p1.e.totalReps < p2.e.totalReps) {
-    return { label: 'Step back', value: `${last.e.top - inc} × ${target}`, load: last.e.top - inc, reps: target, reason: `${last.e.top} has slid two sessions running (${p2.e.reps.join(', ')} then ${p1.e.reps.join(', ')} then ${repsStr}). Step back and rebuild.` };
+    return { label: 'Step back', value: `${last.e.top - inc} × ${target}`, load: last.e.top - inc, reps: target, reason: `Total reps at ${last.e.top} have slid three sessions running: ${p2.e.totalReps}, then ${p1.e.totalReps}, then ${last.e.totalReps}. Step back and rebuild.` };
   }
-  return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, reason: `Last time at ${last.e.top} you got ${repsStr} reps, clean, but the target is ${target} on every set.` };
+  return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, reason: `${where}. Clean, but the target is ${target} reps on every set.` };
 }
 
 function nextCard(n) {

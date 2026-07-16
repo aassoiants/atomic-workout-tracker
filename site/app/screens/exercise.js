@@ -214,10 +214,109 @@ async function buildHistoryPane(ctx, doc, ex) {
     pane.append(h('div', { class: 'hist-empty' }, 'No earlier sessions of this exercise.'));
     return { pane, count: 0, lastPast };
   }
+  const next = computeNext(hist);
+  if (next) pane.append(nextCard(next));
   pane.append(h('div', { class: 'hist-lead' },
     'This exercise · ', h('strong', {}, `${hist.length} session${hist.length !== 1 ? 's' : ''}`), ' on record'));
   hist.forEach((x, i) => pane.append(histCard(x.s, x.past, i === 0)));
   return { pane, count: hist.length, lastPast };
+}
+
+// ── "Next" suggestion: flag-gated double progression over the record ────────
+// A derived view with a visible rule, never advice: advance only off a clean
+// exposure that hit the rep target, repeat after grinders, hold after gaps,
+// step back after two sliding exposures. Display-only; shows its work.
+
+// One past exposure reduced to its top-load working sets.
+function summarizeExposure(past) {
+  const groups = exerciseSetSummary(past).filter((g) => !g.duration && g.load > 0);
+  if (!groups.length) return null;
+  const top = Math.max(...groups.map((g) => g.load));
+  const at = groups.filter((g) => g.load === top);
+  const flags = { assisted: 0, partial: 0, failed: 0 };
+  at.forEach((g) => { flags.assisted += g.assisted; flags.partial += g.partial; flags.failed += g.failed; });
+  return {
+    top,
+    reps: at.map((g) => g.reps),
+    totalReps: at.reduce((n, g) => n + g.reps, 0),
+    dirty: !!(flags.assisted || flags.partial || flags.failed),
+    flags,
+  };
+}
+
+// Smallest load step ever actually made on this exercise (fallback 5).
+function learnIncrement(exposures) {
+  const diffs = [];
+  for (let i = 0; i < exposures.length - 1; i++) {
+    const d = Math.abs(exposures[i].e.top - exposures[i + 1].e.top);
+    if (d > 0) diffs.push(d);
+  }
+  return diffs.length ? Math.min(...diffs) : 5;
+}
+
+function mode(nums) {
+  if (!nums.length) return null;
+  const counts = new Map();
+  nums.forEach((n) => counts.set(n, (counts.get(n) || 0) + 1));
+  return [...counts.entries()].sort((a, b) => (b[1] - a[1]) || (b[0] - a[0]))[0][0];
+}
+
+function flagsPhrase(f) {
+  const parts = [];
+  if (f.assisted) parts.push(`${f.assisted} assisted`);
+  if (f.partial) parts.push(`${f.partial} partial`);
+  if (f.failed) parts.push(`${f.failed} failed`);
+  return parts.join(', ');
+}
+
+function computeNext(hist) {
+  const exposures = hist
+    .map((x) => ({ when: x.s.started_at, e: summarizeExposure(x.past) }))
+    .filter((x) => x.e);
+  if (!exposures.length) return null; // duration-only history: the cards speak for themselves
+
+  const last = exposures[0];
+  const repsStr = last.e.reps.join('/');
+  const ago = agoLabel(last.when);
+
+  if (exposures.length < 3) {
+    return { label: 'Low confidence', value: null, reason: `Only ${exposures.length} session${exposures.length !== 1 ? 's' : ''} on record — too little history to suggest. Log what's real.` };
+  }
+
+  const inc = learnIncrement(exposures);
+  const cleanMaxes = exposures.slice(0, 6).filter((x) => !x.e.dirty).map((x) => Math.max(...x.e.reps));
+  const target = mode(cleanMaxes) || Math.max(...last.e.reps);
+  const gapDays = Math.floor((Date.now() - Date.parse(last.when)) / 86400000);
+
+  if (gapDays > 84) {
+    const load = Math.max(inc, Math.round((last.e.top * 0.85) / inc) * inc);
+    return { label: 'Restart light', value: `~${load}`, reason: `${Math.round(gapDays / 7)} weeks since last exposure — old numbers are stale; start easy, you'll be back fast. (Heuristic: layoff rules aren't evidence-backed.)` };
+  }
+  if (gapDays > 28) {
+    return { label: 'Hold', value: `${last.e.top} × ${target}`, reason: `${Math.round(gapDays / 7)} weeks since last exposure — strength holds about 4 weeks; repeat before advancing.` };
+  }
+  if (last.e.dirty) {
+    return { label: 'Repeat', value: `${last.e.top} × ${target}`, reason: `Last time at ${last.e.top} had ${flagsPhrase(last.e.flags)} — earn it clean first.` };
+  }
+  if (last.e.reps.every((r) => r >= target)) {
+    return { label: 'Progress', value: `${last.e.top + inc} × ${target}`, reason: `${last.e.top}: ${repsStr} clean, ${ago}.` };
+  }
+  const p1 = exposures[1];
+  const p2 = exposures[2];
+  if (p1 && p2 && p1.e.top === last.e.top && p2.e.top === last.e.top
+      && last.e.totalReps < p1.e.totalReps && p1.e.totalReps < p2.e.totalReps) {
+    return { label: 'Step back', value: `${last.e.top - inc} × ${target}`, reason: `${last.e.top} has slid two sessions running (${p2.e.reps.join('/')} → ${p1.e.reps.join('/')} → ${repsStr}) — step back, rebuild.` };
+  }
+  return { label: 'Repeat', value: `${last.e.top} × ${target}`, reason: `${last.e.top}: ${repsStr} clean but under the ${target}-rep target — repeat.` };
+}
+
+function nextCard(n) {
+  return h('div', { class: 'next-card' },
+    h('div', { class: 'nc-top' },
+      h('span', { class: 'nc-tag' }, 'Next'),
+      h('span', { class: 'nc-label' }, n.label)),
+    n.value ? h('div', { class: 'nc-val' }, n.value) : null,
+    h('div', { class: 'nc-reason' }, n.reason));
 }
 
 function histCard(s, ex, latest) {

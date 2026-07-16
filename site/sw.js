@@ -1,5 +1,5 @@
 // Atomic service worker — precache the app shell so the gym works in airplane mode.
-const CACHE = 'atomic-v20';
+const CACHE = 'atomic-v21';
 const ASSETS = [
   './',
   './index.html',

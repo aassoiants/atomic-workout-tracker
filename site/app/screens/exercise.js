@@ -5,7 +5,7 @@ import { h, clear } from '../dom.js';
 import { bottomNav, formatLongDate, fmtDuration } from '../ui.js';
 import {
   findExercise, addSet, setSummary, exerciseSetSummary,
-  isDurationSet, setDuration, addDurationSet,
+  isDurationSet, setDuration, addDurationSet, localISO,
 } from '../model.js';
 
 export async function renderExercise(ctx, sessionId, exerciseId) {
@@ -14,8 +14,24 @@ export async function renderExercise(ctx, sessionId, exerciseId) {
   if (!ex) { ctx.router.go({ name: 'session', sessionId }); return h('div'); }
   const unit = doc.session.load_unit;
 
-  const { pane: histPane, count: histCount, lastPast } = await buildHistoryPane(ctx, doc, ex);
+  const { pane: histPane, count: histCount, lastPast, next } = await buildHistoryPane(ctx, doc, ex);
   histPane.hidden = true;
+
+  // Prediction ledger: the first time a set is logged, stamp the suggestion
+  // that was live. Stored as a fact (with its rule version) so later analysis
+  // can compare what the app said against what actually happened — even
+  // after the rule itself evolves.
+  const stampSuggestion = () => {
+    if (!next || next.load == null) return;
+    if (ex._extra && ex._extra.atomic && ex._extra.atomic.suggestion) return;
+    ex._extra = ex._extra || {};
+    ex._extra.atomic = ex._extra.atomic || {};
+    ex._extra.atomic.suggestion = {
+      label: next.label, load: next.load,
+      ...(next.reps != null ? { reps: next.reps } : {}),
+      rule: 'flag-gated-dp-v1', at: localISO(new Date()),
+    };
+  };
 
   // Input mode defaults to however this exercise was last logged — this
   // session first, then its most recent past session.
@@ -101,6 +117,7 @@ export async function renderExercise(ctx, sessionId, exerciseId) {
     if (isNaN(reps)) { repsInput.focus(); return; }
     const load = parseFloat(weightInput.value);
     addSet(ex, { load: isNaN(load) ? 0 : load, reps_completed: reps });
+    stampSuggestion();
     await ctx.store.saveSession(doc);
     renderBody();
     updateSetNums();
@@ -130,6 +147,7 @@ export async function renderExercise(ctx, sessionId, exerciseId) {
     if (!secs) { minIn.focus(); return; }
     const count = Math.max(1, parseInt(cntIn.value, 10) || 1);
     for (let i = 0; i < count; i++) addDurationSet(ex, secs);
+    stampSuggestion();
     await ctx.store.saveSession(doc);
     renderBody();
     updateSetNums();
@@ -219,7 +237,7 @@ async function buildHistoryPane(ctx, doc, ex) {
   pane.append(h('div', { class: 'hist-lead' },
     'This exercise · ', h('strong', {}, `${hist.length} session${hist.length !== 1 ? 's' : ''}`), ' on record'));
   hist.forEach((x, i) => pane.append(histCard(x.s, x.past, i === 0)));
-  return { pane, count: hist.length, lastPast };
+  return { pane, count: hist.length, lastPast, next };
 }
 
 // ── "Next" suggestion: flag-gated double progression over the record ────────
@@ -290,24 +308,24 @@ function computeNext(hist) {
 
   if (gapDays > 84) {
     const load = Math.max(inc, Math.round((last.e.top * 0.85) / inc) * inc);
-    return { label: 'Restart light', value: `~${load}`, reason: `${Math.round(gapDays / 7)} weeks since last exposure — old numbers are stale; start easy, you'll be back fast. (Heuristic: layoff rules aren't evidence-backed.)` };
+    return { label: 'Restart light', value: `~${load}`, load, reason: `${Math.round(gapDays / 7)} weeks since last exposure — old numbers are stale; start easy, you'll be back fast. (Heuristic: layoff rules aren't evidence-backed.)` };
   }
   if (gapDays > 28) {
-    return { label: 'Hold', value: `${last.e.top} × ${target}`, reason: `${Math.round(gapDays / 7)} weeks since last exposure — strength holds about 4 weeks; repeat before advancing.` };
+    return { label: 'Hold', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, reason: `${Math.round(gapDays / 7)} weeks since last exposure — strength holds about 4 weeks; repeat before advancing.` };
   }
   if (last.e.dirty) {
-    return { label: 'Repeat', value: `${last.e.top} × ${target}`, reason: `Last time at ${last.e.top} had ${flagsPhrase(last.e.flags)} — earn it clean first.` };
+    return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, reason: `Last time at ${last.e.top} had ${flagsPhrase(last.e.flags)} — earn it clean first.` };
   }
   if (last.e.reps.every((r) => r >= target)) {
-    return { label: 'Progress', value: `${last.e.top + inc} × ${target}`, reason: `${last.e.top}: ${repsStr} clean, ${ago}.` };
+    return { label: 'Progress', value: `${last.e.top + inc} × ${target}`, load: last.e.top + inc, reps: target, reason: `${last.e.top}: ${repsStr} clean, ${ago}.` };
   }
   const p1 = exposures[1];
   const p2 = exposures[2];
   if (p1 && p2 && p1.e.top === last.e.top && p2.e.top === last.e.top
       && last.e.totalReps < p1.e.totalReps && p1.e.totalReps < p2.e.totalReps) {
-    return { label: 'Step back', value: `${last.e.top - inc} × ${target}`, reason: `${last.e.top} has slid two sessions running (${p2.e.reps.join('/')} → ${p1.e.reps.join('/')} → ${repsStr}) — step back, rebuild.` };
+    return { label: 'Step back', value: `${last.e.top - inc} × ${target}`, load: last.e.top - inc, reps: target, reason: `${last.e.top} has slid two sessions running (${p2.e.reps.join('/')} → ${p1.e.reps.join('/')} → ${repsStr}) — step back, rebuild.` };
   }
-  return { label: 'Repeat', value: `${last.e.top} × ${target}`, reason: `${last.e.top}: ${repsStr} clean but under the ${target}-rep target — repeat.` };
+  return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, reason: `${last.e.top}: ${repsStr} clean but under the ${target}-rep target — repeat.` };
 }
 
 function nextCard(n) {

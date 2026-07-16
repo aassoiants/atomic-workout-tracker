@@ -67,6 +67,14 @@ export async function renderExercise(ctx, sessionId, exerciseId) {
     };
   };
 
+  // The recommendation greets you on the Log tab while nothing is logged yet;
+  // once a set exists (or a plan is laid out) it steps aside. History keeps
+  // its copy permanently.
+  const logNextCard = next ? nextCard(next, (n) => applySuggestion(n)) : null;
+  function updateLogCard() {
+    if (logNextCard) logNextCard.hidden = !!(ex.sets.length || currentPlan());
+  }
+
   // Input mode defaults to however this exercise was last logged — this
   // session first, then its most recent past session.
   const lastOwn = ex.sets[ex.sets.length - 1];
@@ -147,6 +155,7 @@ export async function renderExercise(ctx, sessionId, exerciseId) {
         }
       }
     }
+    updateLogCard();
   }
 
   const setNumW = h('span', { class: 'set-num' }, '');
@@ -227,7 +236,7 @@ export async function renderExercise(ctx, sessionId, exerciseId) {
   updateSetNums();
   applyMode();
 
-  const logPane = h('div', { class: 'content' }, table, weightRow, durationRow, modeToggle);
+  const logPane = h('div', { class: 'content' }, logNextCard, table, weightRow, durationRow, modeToggle);
 
   const tabLogBtn = h('button', { class: 'ex-tab active', onClick: () => switchTab(false) }, 'Log');
   const tabHistBtn = h('button', { class: 'ex-tab', onClick: () => switchTab(true) }, 'History',

@@ -429,6 +429,7 @@ body {
 
 /* "Next" suggestion, design D: scoreboard verdict, wildcard line, Apply.
    Cyan = derived view, distinct from the volt record. */
+.content > .next-card { margin-top: 0; }
 .next-card {
   background: linear-gradient(135deg, rgba(0, 229, 255, 0.12), rgba(0, 229, 255, 0.02) 70%);
   border: 1px solid rgba(0, 229, 255, 0.35);

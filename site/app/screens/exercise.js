@@ -14,8 +14,18 @@ export async function renderExercise(ctx, sessionId, exerciseId) {
   if (!ex) { ctx.router.go({ name: 'session', sessionId }); return h('div'); }
   const unit = doc.session.load_unit;
 
-  const { pane: histPane, count: histCount, lastPast, next } = await buildHistoryPane(ctx, doc, ex);
+  const { pane: histPane, count: histCount, lastPast, next } = await buildHistoryPane(ctx, doc, ex, (n) => applySuggestion(n));
   histPane.hidden = true;
+
+  // Apply: load the suggestion into the input row and jump to the Log tab.
+  // The record is untouched until a set is actually logged.
+  function applySuggestion(n) {
+    if (durationMode) { durationMode = false; applyMode(); }
+    if (n.load != null) weightInput.value = String(n.load);
+    if (n.reps != null) repsInput.value = String(n.reps);
+    switchTab(false);
+    repsInput.select();
+  }
 
   // Prediction ledger: the first time a set is logged, stamp the suggestion
   // that was live. Stored as a fact (with its rule version) so later analysis
@@ -216,7 +226,7 @@ function exerciseNote(ctx, doc, ex) {
 
 // ── History tab: this exercise across earlier sessions, newest first ────────
 
-async function buildHistoryPane(ctx, doc, ex) {
+async function buildHistoryPane(ctx, doc, ex, onApply) {
   const all = await ctx.store.allSessions();
   const name = (ex.display_name || '').trim().toLowerCase();
   const t0 = Date.parse(doc.session.started_at);
@@ -233,7 +243,7 @@ async function buildHistoryPane(ctx, doc, ex) {
     return { pane, count: 0, lastPast };
   }
   const next = computeNext(hist);
-  if (next) pane.append(nextCard(next));
+  if (next) pane.append(nextCard(next, onApply));
   pane.append(h('div', { class: 'hist-lead' },
     'This exercise · ', h('strong', {}, `${hist.length} session${hist.length !== 1 ? 's' : ''}`), ' on record'));
   hist.forEach((x, i) => pane.append(histCard(x.s, x.past, i === 0)));
@@ -329,7 +339,7 @@ function computeNext(hist) {
     return { label: 'Restart light', value: `~${load}`, load, reason: `${Math.round(gapDays / 7)} weeks since you last did this. Old numbers go stale, so start easy. You'll be back fast. (Layoff sizing is a heuristic, not tested evidence.)` };
   }
   if (gapDays > 28) {
-    return { label: 'Hold', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, reason: `${Math.round(gapDays / 7)} weeks since you last did this. Strength holds about 4 weeks, so repeat it once before advancing.` };
+    return { label: 'Hold', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, wild: last.e.top + inc, reason: `${Math.round(gapDays / 7)} weeks since you last did this. Strength holds about 4 weeks, so repeat it once before advancing.` };
   }
   if (last.e.dirty) {
     return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, reason: `${did}, but the ${last.e.top} sets included ${flagsPhrase(last.e.flags)}. Earn it clean first.` };
@@ -343,16 +353,26 @@ function computeNext(hist) {
       && last.e.totalReps < p1.e.totalReps && p1.e.totalReps < p2.e.totalReps) {
     return { label: 'Step back', value: `${last.e.top - inc} × ${target}`, load: last.e.top - inc, reps: target, reason: `Your total reps at ${last.e.top} have dropped three sessions in a row: ${p2.e.totalReps}, then ${p1.e.totalReps}, then ${last.e.totalReps}. Step back and rebuild.` };
   }
-  return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, reason: `${did}. The target at ${last.e.top}${last.e.hadLighter ? ', your top weight,' : ''} is ${target} reps on every set. Not quite there, so run it back.` };
+  return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, wild: last.e.top + inc, reason: `${did}. The target at ${last.e.top}${last.e.hadLighter ? ', your top weight,' : ''} is ${target} reps on every set. Not quite there, so run it back.` };
 }
 
-function nextCard(n) {
+// Design D: scoreboard verdict + wildcard permission line + Apply.
+function nextCard(n, onApply) {
+  const verdict = {
+    'Progress': 'Go up', 'Repeat': 'Again', 'Hold': 'Hold',
+    'Restart light': 'Ease in', 'Step back': 'Step back', 'Low confidence': 'Low confidence',
+  }[n.label] || n.label;
   return h('div', { class: 'next-card' },
-    h('div', { class: 'nc-top' },
-      h('span', { class: 'nc-tag' }, 'Next'),
-      h('span', { class: 'nc-label' }, n.label)),
+    h('span', { class: 'nc-verdict' }, verdict),
     n.value ? h('div', { class: 'nc-val' }, n.value) : null,
-    h('div', { class: 'nc-reason' }, n.reason));
+    h('div', { class: 'nc-reason' }, n.reason),
+    n.load != null && onApply
+      ? h('button', { class: 'nc-apply', onClick: () => onApply(n) }, `Apply ${n.value}`)
+      : null,
+    n.wild != null
+      ? h('div', { class: 'nc-wild' }, `Bored of ${n.load}? Take ${n.wild} for a ride. `,
+          h('span', {}, 'A heavy day you wanted beats a target you skipped.'))
+      : null);
 }
 
 function histCard(s, ex, latest) {

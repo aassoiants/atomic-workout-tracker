@@ -6,18 +6,13 @@
 import { toWODIS, fromWODIS, localISO } from './model.js';
 import { toast } from './ui.js';
 
-// Spec conformance: an exported document MUST have >= 1 exercise, so
-// note-only sessions stay local (they aren't valid WODIS on their own).
-// Shared by manual export and sync push — the synced blob IS the export format.
-export async function buildExportDocs(store) {
-  return (await store.allSessions())
+export async function exportWodis(store) {
+  // Spec conformance: an exported document MUST have >= 1 exercise, so
+  // note-only sessions stay local (they aren't valid WODIS on their own).
+  const docs = (await store.allSessions())
     .filter((d) => d.session.exercises.length)
     .sort((a, b) => Date.parse(a.session.started_at) - Date.parse(b.session.started_at))
     .map(toWODIS);
-}
-
-export async function exportWodis(store) {
-  const docs = await buildExportDocs(store);
   if (!docs.length) { toast('Nothing to export yet'); return; }
 
   const name = `atomic-${localISO(new Date()).slice(0, 10)}.wodis.json`;

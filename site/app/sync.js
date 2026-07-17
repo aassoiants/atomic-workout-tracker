@@ -12,6 +12,13 @@ const KEY = 'atomic.sync.v1';
 const DIRTY = 'atomic.sync.dirty';
 const APP_PATH = '/v1/atomic/current';
 
+// Prefill for the setup form: the last endpoint used on this device, so
+// re-enabling sync doesn't retype the URL. Empty on a fresh install (no server
+// address is hardcoded in the public app).
+export function lastEndpoint() {
+  return localStorage.getItem('atomic.sync.lasturl') || '';
+}
+
 export function getConfig() {
   try {
     const c = JSON.parse(localStorage.getItem(KEY) || 'null');
@@ -25,8 +32,10 @@ export function syncStatus() {
 }
 
 export function setConfig(url, token) {
-  if (!url || !token) localStorage.removeItem(KEY);
-  else localStorage.setItem(KEY, JSON.stringify({ url: String(url).trim().replace(/\/+$/, ''), token: String(token).trim() }));
+  if (!url || !token) { localStorage.removeItem(KEY); return; }
+  const clean = String(url).trim().replace(/\/+$/, '');
+  localStorage.setItem(KEY, JSON.stringify({ url: clean, token: String(token).trim() }));
+  localStorage.setItem('atomic.sync.lasturl', clean); // remembered for re-setup
 }
 
 function call(cfg, method, body) {

@@ -8,7 +8,7 @@ import { renderExercise } from './screens/exercise.js';
 import { renderDetail } from './screens/detail.js';
 import { renderMore } from './screens/more.js';
 import { toast } from './ui.js';
-import { initSync, schedulePush, getConfig, setConfig, watchOnline } from './sync.js';
+import { initSync, schedulePush, watchOnline } from './sync.js';
 
 const root = document.getElementById('app');
 let route = { name: 'feed' };
@@ -101,27 +101,6 @@ const ctx = {
   async exportWodis() {
     const { exportWodis } = await import('./export.js');
     await exportWodis(store);
-  },
-  // Configure or disable sync on this device. The endpoint URL and token are
-  // the user's own (their self-hosted box); they live in localStorage only.
-  async syncSetup() {
-    const cur = getConfig();
-    if (cur) {
-      if (window.confirm(`Sync is on:\n${cur.url}\nTurn it off on this device?`)) {
-        setConfig(null);
-        toast('Sync off');
-        render();
-      }
-      return;
-    }
-    const url = window.prompt('Sync endpoint URL (https://…)');
-    if (!url || !url.trim()) return;
-    const token = window.prompt('Sync token');
-    if (!token || !token.trim()) return;
-    setConfig(url, token);
-    toast('Sync on');
-    await initSync(store);
-    render();
   },
 };
 

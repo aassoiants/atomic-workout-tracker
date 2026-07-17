@@ -1,0 +1,94 @@
+// Optional sync to a self-hosted endpoint. Dormant unless the user configures
+// an endpoint URL + token (Sync on the feed); the public app never talks to
+// any network without that opt-in. The synced blob is exactly the export
+// carton (an array of WODIS documents), pushed whole — small data, simple
+// truth. Pull merges by session.id (same dedupe as restore), so pulling is
+// always safe. Only a device that made local edits pushes (dirty flag), which
+// keeps secondary devices from resurrecting states they merely read.
+import { buildExportDocs, restoreWodis } from './export.js';
+import { toast } from './ui.js';
+
+const KEY = 'atomic.sync.v1';
+const DIRTY = 'atomic.sync.dirty';
+const APP_PATH = '/v1/atomic/current';
+
+export function getConfig() {
+  try {
+    const c = JSON.parse(localStorage.getItem(KEY) || 'null');
+    return c && c.url && c.token ? c : null;
+  } catch { return null; }
+}
+
+export function syncStatus() {
+  const cfg = getConfig();
+  return { on: !!cfg, url: cfg ? cfg.url : '', last: localStorage.getItem('atomic.sync.last') };
+}
+
+export function setConfig(url, token) {
+  if (!url || !token) localStorage.removeItem(KEY);
+  else localStorage.setItem(KEY, JSON.stringify({ url: String(url).trim().replace(/\/+$/, ''), token: String(token).trim() }));
+}
+
+function call(cfg, method, body) {
+  return fetch(cfg.url + APP_PATH, {
+    method,
+    headers: { 'X-Sync-Token': cfg.token, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+    body: body || undefined,
+  });
+}
+
+export async function pushAll(store) {
+  const cfg = getConfig();
+  if (!cfg) return false;
+  const docs = await buildExportDocs(store);
+  if (!docs.length) return false;
+  const res = await call(cfg, 'PUT', JSON.stringify(docs));
+  if (!res.ok) throw new Error('push HTTP ' + res.status);
+  localStorage.removeItem(DIRTY);
+  localStorage.setItem('atomic.sync.last', new Date().toISOString());
+  return true;
+}
+
+let pushTimer = null;
+// Called after every local save/delete: mark dirty, push soon. Capture never
+// waits on this — failures leave the dirty flag for the next boot/online.
+export function schedulePush(store) {
+  if (!getConfig()) return;
+  localStorage.setItem(DIRTY, '1');
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => { pushAll(store).catch(() => {}); }, 3000);
+}
+
+// Boot (and post-setup) sync: pull + merge, then push only if this device has
+// unsynced local edits, or the server is empty and we hold history (first
+// seed). Returns how many sessions the pull added, so the caller can rerender.
+export async function initSync(store) {
+  const cfg = getConfig();
+  if (!cfg) return 0;
+  let added = 0;
+  let serverEmpty = false;
+  try {
+    const res = await call(cfg, 'GET');
+    if (res.ok) {
+      const r = await restoreWodis(store, await res.text());
+      added = r.added;
+    } else if (res.status === 404) {
+      serverEmpty = true;
+    } else {
+      throw new Error('pull HTTP ' + res.status);
+    }
+    const haveLocal = (await store.allSessions()).length > 0;
+    if (localStorage.getItem(DIRTY) || (serverEmpty && haveLocal)) await pushAll(store);
+    if (added) toast(`Synced ${added} session${added !== 1 ? 's' : ''}`);
+  } catch {
+    // Offline or endpoint unreachable: leave state as-is; dirty edits push later.
+  }
+  return added;
+}
+
+// Retry pending pushes when the network returns.
+export function watchOnline(store) {
+  window.addEventListener('online', () => {
+    if (localStorage.getItem(DIRTY)) pushAll(store).catch(() => {});
+  });
+}

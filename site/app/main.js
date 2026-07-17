@@ -6,7 +6,9 @@ import { renderFeed } from './screens/feed.js';
 import { renderSession } from './screens/session.js';
 import { renderExercise } from './screens/exercise.js';
 import { renderDetail } from './screens/detail.js';
+import { renderMore } from './screens/more.js';
 import { toast } from './ui.js';
+import { initSync, schedulePush, getConfig, setConfig, watchOnline } from './sync.js';
 
 const root = document.getElementById('app');
 let route = { name: 'feed' };
@@ -16,9 +18,18 @@ const router = {
   go(next) { route = next; render(); },
 };
 
+// Store facade: every local write also schedules a sync push (a no-op unless
+// sync is configured). Screens and importers write through this; reads are
+// untouched.
+const syncedStore = {
+  ...store,
+  saveSession: async (doc) => { const r = await store.saveSession(doc); schedulePush(store); return r; },
+  deleteSession: async (id) => { const r = await store.deleteSession(id); schedulePush(store); return r; },
+};
+
 const ctx = {
   router,
-  store,
+  store: syncedStore,
   // Hold the new session in memory; it isn't written until something is logged,
   // so backing out doesn't litter the feed with empty in-progress sessions.
   async newSession() {
@@ -50,7 +61,7 @@ const ctx = {
         const head = text.trimStart();
         if (head.startsWith('[') || head.startsWith('{')) {
           const { restoreWodis } = await import('./export.js');
-          const { added, skipped } = await restoreWodis(store, text);
+          const { added, skipped } = await restoreWodis(syncedStore, text);
           render();
           toast(added
             ? `Restored ${added} session${added !== 1 ? 's' : ''}${skipped ? ` · ${skipped} skipped` : ''}`
@@ -73,8 +84,8 @@ const ctx = {
           const same = byDate.get(doc.session.started_at.slice(0, 10)) || [];
           const olds = same.filter((d) => d.meta && d.meta.source === 'imported-csv');
           if (same.length && !olds.length) continue;
-          for (const old of olds) await store.deleteSession(old.session.id);
-          await store.saveSession(doc);
+          for (const old of olds) await syncedStore.deleteSession(old.session.id);
+          await syncedStore.saveSession(doc);
           if (olds.length) refreshed += 1; else added += 1;
         }
         render();
@@ -91,6 +102,27 @@ const ctx = {
     const { exportWodis } = await import('./export.js');
     await exportWodis(store);
   },
+  // Configure or disable sync on this device. The endpoint URL and token are
+  // the user's own (their self-hosted box); they live in localStorage only.
+  async syncSetup() {
+    const cur = getConfig();
+    if (cur) {
+      if (window.confirm(`Sync is on:\n${cur.url}\nTurn it off on this device?`)) {
+        setConfig(null);
+        toast('Sync off');
+        render();
+      }
+      return;
+    }
+    const url = window.prompt('Sync endpoint URL (https://…)');
+    if (!url || !url.trim()) return;
+    const token = window.prompt('Sync token');
+    if (!token || !token.trim()) return;
+    setConfig(url, token);
+    toast('Sync on');
+    await initSync(store);
+    render();
+  },
 };
 
 async function render() {
@@ -99,6 +131,7 @@ async function render() {
     if (route.name === 'session') node = await renderSession(ctx, route.sessionId);
     else if (route.name === 'exercise') node = await renderExercise(ctx, route.sessionId, route.exerciseId);
     else if (route.name === 'detail') node = await renderDetail(ctx, route.sessionId, route.exerciseId, route.setId);
+    else if (route.name === 'more') node = await renderMore(ctx);
     else node = await renderFeed(ctx);
   } catch (err) {
     node = errorScreen(err);
@@ -136,6 +169,10 @@ async function boot() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
+  // Sync last so first paint never waits on the network; rerender if the pull
+  // brought sessions this device hadn't seen.
+  watchOnline(store);
+  initSync(store).then((added) => { if (added) render(); });
 }
 
 boot();

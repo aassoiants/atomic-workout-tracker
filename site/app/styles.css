@@ -696,3 +696,4 @@ body {
 .sync-on-btn { background: var(--volt); color: #000; }
 .sync-on-btn:disabled { opacity: 0.6; }
 .sync-off-btn { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+.sync-build { text-align: center; color: var(--text-secondary); font-size: 11px; opacity: 0.6; margin: 18px 0 6px; }

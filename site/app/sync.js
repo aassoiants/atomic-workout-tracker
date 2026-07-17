@@ -46,6 +46,16 @@ function call(cfg, method, body) {
   });
 }
 
+// Explicit reachability probe for setup. Hits the cheap /meta route with the
+// given (not-yet-saved) endpoint + token. Resolves { status } when the server
+// answers at all (200 has data, 404 empty, 401 bad token); rejects only on a
+// real network / CORS / TLS failure, so the UI can tell those cases apart.
+export async function testEndpoint(url, token) {
+  const base = String(url).trim().replace(/\/+$/, '');
+  const res = await fetch(base + '/v1/atomic/meta', { headers: { 'X-Sync-Token': String(token).trim() } });
+  return { status: res.status };
+}
+
 export async function pushAll(store) {
   const cfg = getConfig();
   if (!cfg) return false;

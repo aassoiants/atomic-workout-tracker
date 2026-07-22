@@ -69,13 +69,12 @@ const ctx = {
             toast(res.renames
               ? `Renamed ${res.renames} exercise${res.renames !== 1 ? 's' : ''} · ${res.renameSessions} sessions updated${res.skipped ? ` · ${res.skipped} skipped` : ''}`
               : 'Renames already applied');
-          } else if (res.profilesAdded != null) {
-            const n = res.profilesAdded + res.profilesUpdated;
-            toast(n ? `Exercise plans: ${res.profilesAdded} added · ${res.profilesUpdated} updated` : 'Exercise plans already up to date');
           } else {
-            toast(res.added
-              ? `Restored ${res.added} session${res.added !== 1 ? 's' : ''}${res.skipped ? ` · ${res.skipped} skipped` : ''}`
-              : 'Already up to date');
+            const parts = [];
+            if (res.added) parts.push(`${res.added} session${res.added !== 1 ? 's' : ''}`);
+            const plans = (res.profilesAdded || 0) + (res.profilesUpdated || 0);
+            if (plans) parts.push(`${plans} exercise plan${plans !== 1 ? 's' : ''}`);
+            toast(parts.length ? `Restored ${parts.join(' · ')}` : 'Already up to date');
           }
           return;
         }

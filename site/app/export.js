@@ -7,27 +7,46 @@ import { toWODIS, fromWODIS, localISO } from './model.js';
 import { toast } from './ui.js';
 import { normalizeName } from './plan.js';
 
-export async function exportWodis(store) {
-  // Spec conformance: an exported document MUST have >= 1 exercise, so
-  // note-only sessions stay local (they aren't valid WODIS on their own).
-  const docs = (await store.allSessions())
+// Spec conformance: an exported document MUST have >= 1 exercise, so
+// note-only sessions stay local (they aren't valid WODIS on their own).
+export async function buildExportDocs(store) {
+  return (await store.allSessions())
     .filter((d) => d.session.exercises.length)
     .sort((a, b) => Date.parse(a.session.started_at) - Date.parse(b.session.started_at))
     .map(toWODIS);
-  if (!docs.length) { toast('Nothing to export yet'); return; }
+}
+
+// The typed carton: every discrete kind of data as a named section, so one
+// file is the whole app state. Export, sync, and the nightly box snapshots
+// all carry this shape; a new data type = a new section here + a restore
+// branch below. Sessions stay pure WODIS documents inside their section.
+export async function buildCarton(store) {
+  return {
+    format: 'atomic-carton/2',
+    exported_at: localISO(new Date()),
+    sessions: await buildExportDocs(store),
+    exercise_profiles: await store.allProfiles(),
+  };
+}
+
+export async function exportWodis(store) {
+  const carton = await buildCarton(store);
+  if (!carton.sessions.length && !carton.exercise_profiles.length) { toast('Nothing to export yet'); return; }
+  const docs = carton.sessions;
 
   const name = `atomic-${localISO(new Date()).slice(0, 10)}.wodis.json`;
-  const json = JSON.stringify(docs);
+  const json = JSON.stringify(carton);
   const file = new File([json], name, { type: 'application/json' });
 
   const canNativeShare = (() => {
     try { return !!(navigator.canShare && navigator.canShare({ files: [file] })); }
     catch (_) { return false; }
   })();
+  const doneMsg = `Exported ${docs.length} sessions · ${carton.exercise_profiles.length} exercise plans`;
   if (canNativeShare) {
     try {
       await navigator.share({ files: [file], title: 'Atomic training history' });
-      toast(`Exported ${docs.length} sessions`);
+      toast(doneMsg);
       return;
     } catch (err) {
       if (err && err.name === 'AbortError') return; // user closed the sheet
@@ -40,7 +59,7 @@ export async function exportWodis(store) {
   a.download = name;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
-  toast(`Exported ${docs.length} sessions`);
+  toast(doneMsg);
 }
 
 // Read a .wodis.json (array or single document) back into the store.
@@ -55,7 +74,16 @@ export async function restoreWodis(store, text) {
   if (parsed && Array.isArray(parsed.atomic_renames)) {
     return applyRenames(store, parsed.atomic_renames);
   }
-  const docs = Array.isArray(parsed) ? parsed : [parsed];
+  // Typed carton: each section restores through its own handler.
+  if (parsed && typeof parsed.format === 'string' && parsed.format.startsWith('atomic-carton')) {
+    const s = await restoreSessions(store, Array.isArray(parsed.sessions) ? parsed.sessions : []);
+    const p = await restoreProfiles(store, Array.isArray(parsed.exercise_profiles) ? parsed.exercise_profiles : []);
+    return { added: s.added, profilesAdded: p.profilesAdded, profilesUpdated: p.profilesUpdated, skipped: s.skipped + p.skipped };
+  }
+  return restoreSessions(store, Array.isArray(parsed) ? parsed : [parsed]);
+}
+
+async function restoreSessions(store, docs) {
   const have = new Set((await store.allSessions()).map((d) => d.session.id));
   let added = 0;
   let skipped = 0;

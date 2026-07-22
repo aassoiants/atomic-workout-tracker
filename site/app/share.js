@@ -35,7 +35,8 @@ const SHARE_CARD_CSS = `
   font-family:var(--shc-mono); font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:var(--shc-mut2); }
 .shc-loghead-r { margin-left:auto; letter-spacing:0.13em; }
 .shc-exlist { display:grid; grid-template-columns:minmax(0,1fr); }
-.share-card.dense .shc-exlist { grid-template-columns:minmax(0,1fr) minmax(0,1fr); column-gap:26px; }
+.share-card.dense .shc-exlist { grid-template-columns:minmax(0,1fr) minmax(0,1fr); column-gap:26px; grid-auto-flow:column; }
+.shc-ex-no { font-family:var(--shc-mono); font-size:11px; color:var(--shc-mut2); font-variant-numeric:tabular-nums; min-width:13px; }
 .shc-ex { padding:11px 0; border-bottom:1px solid var(--shc-faint2); break-inside:avoid; }
 .shc-ex-top { display:flex; align-items:baseline; gap:10px; }
 .shc-ex-name { flex:1; font-size:15px; font-weight:600; }
@@ -108,9 +109,10 @@ export function buildShareCard(doc, { number } = {}) {
   const s = doc.session;
   const unit = s.load_unit;
   const dense = s.exercises.length > 6;
-  const rows = s.exercises.map((ex) => `
+  const rows = s.exercises.map((ex, i) => `
     <div class="shc-ex">
       <div class="shc-ex-top">
+        ${dense ? `<span class="shc-ex-no">${i + 1}</span>` : ''}
         <span class="shc-ex-name">${esc(ex.display_name)}</span>
         <span class="shc-ex-vol">${exerciseTonnage(ex).toLocaleString()}</span>
       </div>
@@ -130,7 +132,7 @@ export function buildShareCard(doc, { number } = {}) {
       <div class="shc-stat"><div class="shc-v">${sessionReps(doc)}</div><div class="shc-l">reps</div></div>
     </div>
     <div class="shc-loghead"><span>Session log</span><span class="shc-loghead-r">Vol · ${unit}</span></div>
-    <div class="shc-exlist">${rows}</div>
+    <div class="shc-exlist"${dense ? ` style="grid-template-rows:repeat(${Math.ceil(s.exercises.length / 2)},auto)"` : ''}>${rows}</div>
     <div class="shc-foot"><span class="shc-mark"><b>Atomic</b> Workout Tracker</span></div>`;
   return card;
 }

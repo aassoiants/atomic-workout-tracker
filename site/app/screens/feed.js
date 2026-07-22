@@ -36,7 +36,9 @@ export async function renderFeed(ctx) {
 function sessionCard(ctx, doc, number) {
   const s = doc.session;
   const label = s.split_type ? `${formatLongDate(s.started_at)} · ${s.split_type}` : formatLongDate(s.started_at);
-  const names = s.exercises.map((e) => e.display_name).join(', ') || 'No exercises';
+  // Middot separator: commas now live inside exercise names (movement-first
+  // convention), so the list separator must be something else.
+  const names = s.exercises.map((e) => e.display_name).join('  ·  ') || 'No exercises';
   const sets = sessionSetCount(doc);
 
   return h('div', { class: 'session-card', onClick: () => ctx.router.go({ name: 'session', sessionId: s.id }) },

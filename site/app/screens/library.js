@@ -49,40 +49,129 @@ export async function renderLibrary(ctx) {
   const profByName = new Map(profiles.map((p) => [p.name, p]));
   const planned = rows.filter((r) => resolvePlan(profByName.get(r.key))).length;
 
+  // Facet state. Muscles filter on the individual muscle (major or minor);
+  // groupings can come later. Buckets and muscles multi-select (OR within a
+  // facet, AND across facets); plan is a three-state toggle.
+  const facets = { muscles: new Set(), buckets: new Set(), plan: null };
+  let query = '';
+
+  // Muscle vocabulary straight from the profiles, most-used first.
+  const muscleCounts = new Map();
+  for (const p of profiles) {
+    const m = p.muscles || {};
+    for (const raw of [...(m.major || []), ...(m.minor || [])]) {
+      const k = raw.trim().toLowerCase();
+      if (!k) continue;
+      const cur = muscleCounts.get(k);
+      if (cur) cur.n += 1; else muscleCounts.set(k, { label: raw.trim(), n: 1 });
+    }
+  }
+  const muscleVocab = [...muscleCounts.values()].sort((a, b) => b.n - a.n);
+
+  const profMuscles = (p) => (p && p.muscles ? [...(p.muscles.major || []), ...(p.muscles.minor || [])] : []);
+
+  function matches(r) {
+    if (query && !r.key.includes(query)) return false;
+    const p = profByName.get(r.key);
+    const plan = resolvePlan(p);
+    if (facets.plan === 'planned' && !plan) return false;
+    if (facets.plan === 'none' && plan) return false;
+    if (facets.buckets.size && !(p && facets.buckets.has(p.bucket))) return false;
+    if (facets.muscles.size) {
+      const mus = profMuscles(p).map((s) => s.trim().toLowerCase());
+      if (![...facets.muscles].some((m) => mus.includes(m))) return false;
+    }
+    return true;
+  }
+
   const list = h('div', { class: 'lib-list' });
-  const draw = (filter) => {
+  const tokens = h('div', { class: 'facet-tokens' });
+  const dot = h('span', { class: 'facet-dot' });
+
+  const draw = () => {
+    tokens.textContent = '';
+    const tok = (label, clear) => tokens.append(
+      h('span', { class: 'facet-token', onClick: () => { clear(); draw(); } }, label, h('small', {}, '×')));
+    for (const m of facets.muscles) tok(muscleCounts.has(m) ? muscleCounts.get(m).label : m, () => facets.muscles.delete(m));
+    for (const b of facets.buckets) tok(BUCKETS[b] ? BUCKETS[b].label : b, () => facets.buckets.delete(b));
+    if (facets.plan) tok(facets.plan === 'planned' ? 'Planned' : 'No plan', () => { facets.plan = null; });
+    const any = facets.muscles.size || facets.buckets.size || facets.plan;
+    tokens.hidden = !any;
+    dot.hidden = !any;
+
     list.textContent = '';
-    const q = normalizeName(filter);
-    const shown = q ? rows.filter((r) => r.key.includes(q)) : rows;
+    const shown = rows.filter(matches);
     if (!shown.length) {
-      list.append(h('div', { class: 'lib-empty' }, q ? 'No exercise matches.' : 'Nothing logged yet.'));
+      list.append(h('div', { class: 'lib-empty' }, 'Nothing matches.'));
       return;
     }
     for (const r of shown) {
-      const summary = planSummary(profByName.get(r.key));
+      const p = profByName.get(r.key);
+      const summary = planSummary(p);
+      const mus = profMuscles(p);
       list.append(h('div', {
         class: 'lib-row',
         onClick: () => ctx.router.go({ name: 'exercise-profile', exName: r.display }),
       },
       h('div', { class: 'lib-main' },
         h('div', { class: 'lib-name' }, r.display),
-        h('div', { class: 'lib-meta' }, `${r.count} session${r.count !== 1 ? 's' : ''} · ${agoLabel(r.last)}`)),
+        mus.length
+          ? h('div', { class: 'lib-muscles' }, mus.join(' · '))
+          : h('div', { class: 'lib-meta' }, `${r.count} session${r.count !== 1 ? 's' : ''} · ${agoLabel(r.last)}`)),
       h('span', { class: 'lib-plan' + (summary ? '' : ' none') }, summary || 'no plan'),
       h('span', { class: 'lib-arrow' }, '›')));
     }
   };
-  draw('');
+
+  // Bottom sheet with the facet grids; chips apply immediately, Done closes.
+  function openSheet() {
+    const overlay = h('div', { class: 'picker-overlay', onClick: (e) => { if (e.target === overlay) overlay.remove(); } });
+    const sheetChips = [];
+    const chip = (label, isOn, toggle) => {
+      const el = h('span', { class: 'facet-chip', onClick: () => { toggle(); refresh(); } }, label);
+      sheetChips.push({ el, isOn });
+      return el;
+    };
+    const refresh = () => { for (const c of sheetChips) c.el.classList.toggle('on', !!c.isOn()); draw(); };
+    const muscleChips = muscleVocab.map((m) => {
+      const k = m.label.toLowerCase();
+      return chip(m.label, () => facets.muscles.has(k),
+        () => { if (facets.muscles.has(k)) facets.muscles.delete(k); else facets.muscles.add(k); });
+    });
+    const bucketChips = Object.entries(BUCKETS).map(([id, b]) => chip(b.label, () => facets.buckets.has(id),
+      () => { if (facets.buckets.has(id)) facets.buckets.delete(id); else facets.buckets.add(id); }));
+    const planChips = [['planned', 'Planned'], ['none', 'No plan']].map(([id, label]) =>
+      chip(label, () => facets.plan === id, () => { facets.plan = facets.plan === id ? null : id; }));
+    overlay.append(h('div', { class: 'picker-sheet facet-sheet' },
+      h('div', { class: 'picker-head' },
+        h('div', { class: 'picker-title' }, 'Filter'),
+        h('button', { class: 'picker-cancel', onClick: () => overlay.remove() }, 'Done')),
+      h('div', { class: 'facet-h' }, 'Muscles'),
+      h('div', { class: 'facet-grid' }, ...muscleChips),
+      h('div', { class: 'facet-h' }, 'Bucket'),
+      h('div', { class: 'facet-grid' }, ...bucketChips),
+      h('div', { class: 'facet-h' }, 'Plan'),
+      h('div', { class: 'facet-grid' }, ...planChips)));
+    document.body.appendChild(overlay);
+    refresh();
+  }
+
+  draw();
 
   const search = h('input', {
-    class: 'picker-search lib-search', type: 'search', placeholder: 'Search exercises...',
-    onInput: (e) => draw(e.target.value),
+    class: 'lib-search-big', type: 'search', placeholder: 'Search exercises...',
+    onInput: (e) => { query = normalizeName(e.target.value); draw(); },
   });
+  const filterBtn = h('button', { class: 'facet-btn', onClick: openSheet },
+    h('span', { html: '&#9881;' }), dot);
 
   const scroll = h('div', { class: 'screen-scroll' },
     h('div', { class: 'feed-head' }, h('div', { class: 'feed-label' }, 'Exercises')),
     h('div', { class: 'lib-sub' },
       h('strong', {}, String(rows.length)), ` on record · `, h('strong', {}, String(planned)), ' with a plan'),
-    h('div', { class: 'lib-body' }, search, list));
+    h('div', { class: 'lib-body' },
+      h('div', { class: 'lib-search-row' }, search, filterBtn),
+      tokens, list));
   return h('div', { class: 'screen' }, scroll, bottomNav('library', ctx));
 }
 

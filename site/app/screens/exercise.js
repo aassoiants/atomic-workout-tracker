@@ -7,6 +7,7 @@ import {
   findExercise, addSet, setSummary, exerciseSetSummary,
   isDurationSet, setDuration, addDurationSet, localISO,
 } from '../model.js';
+import { normalizeName, resolvePlan, fmtRest, fmtRir } from '../plan.js';
 
 export async function renderExercise(ctx, sessionId, exerciseId) {
   const doc = await ctx.store.getSession(sessionId);
@@ -14,7 +15,12 @@ export async function renderExercise(ctx, sessionId, exerciseId) {
   if (!ex) { ctx.router.go({ name: 'session', sessionId }); return h('div'); }
   const unit = doc.session.load_unit;
 
-  const { pane: histPane, count: histCount, lastPast, next } = await buildHistoryPane(ctx, doc, ex, (n) => applySuggestion(n));
+  // Declared plan from the exercise library (null = no bucket set; the
+  // suggestion falls back to history-guessing exactly as before).
+  const profile = await ctx.store.getProfile(normalizeName(ex.display_name));
+  const plan = resolvePlan(profile);
+
+  const { pane: histPane, count: histCount, lastPast, next } = await buildHistoryPane(ctx, doc, ex, (n) => applySuggestion(n), plan);
   histPane.hidden = true;
 
   // Apply: load the suggestion into the input row, lay out planned rows at
@@ -56,10 +62,26 @@ export async function renderExercise(ctx, sessionId, exerciseId) {
   // can compare what the app said against what actually happened — even
   // after the rule itself evolves.
   const stampSuggestion = () => {
-    if (!next || next.load == null) return;
     if (ex._extra && ex._extra.atomic && ex._extra.atomic.suggestion) return;
+    // Muscles are record data, not prescription: they go in the WODIS core
+    // field (exercise.muscle_groups) so the file stays self-describing.
+    if (profile && profile.muscles && !ex.muscle_groups) {
+      const groups = [...(profile.muscles.major || []), ...(profile.muscles.minor || [])]
+        .map((s) => s.toLowerCase());
+      if (groups.length) ex.muscle_groups = groups;
+    }
     ex._extra = ex._extra || {};
     ex._extra.atomic = ex._extra.atomic || {};
+    // The prescription that was in force (from the library plan), so target
+    // and actual live side by side in the file and adherence is computable.
+    if (plan && !ex._extra.atomic.prescription) {
+      ex._extra.atomic.prescription = {
+        bucket: plan.bucket, target_sets: plan.sets, target_reps: plan.reps,
+        target_rir: plan.rir, target_rest_seconds: plan.rest_seconds,
+        at: localISO(new Date()),
+      };
+    }
+    if (!next || next.load == null) return;
     ex._extra.atomic.suggestion = {
       label: next.label, load: next.load,
       ...(next.reps != null ? { reps: next.reps } : {}),
@@ -145,14 +167,40 @@ export async function renderExercise(ctx, sessionId, exerciseId) {
         delete ex._extra.atomic.plan;
         ctx.store.saveSession(doc);
       } else {
+        // The next-up planned row is editable in place: change load or reps
+        // and the whole remaining plan follows (today's call beats the
+        // suggestion). +/- adjusts how many sets are planned.
+        const planEdit = (field) => h('input', {
+          class: 'ghost-in', type: 'number', inputmode: 'decimal', value: String(plan[field]),
+          onChange: (e) => {
+            const n = Number(e.target.value);
+            if (isFinite(n) && n > 0) { plan[field] = n; ctx.store.saveSession(doc); renderBody(); }
+            else { e.target.value = String(plan[field]); }
+          },
+        });
         for (let g = 0; g < remaining; g++) {
           tbody.append(h('tr', { class: 'ghost-row' },
             h('td', { class: 'set-num-cell' }, String(ex.sets.length + g + 1)),
-            h('td', {}, String(plan.load)),
-            h('td', {}, String(plan.reps)),
+            h('td', {}, g === 0 ? planEdit('load') : String(plan.load)),
+            h('td', {}, g === 0 ? planEdit('reps') : String(plan.reps)),
             h('td', {}),
             h('td', {}, g === 0 ? h('span', { class: 'ghost-log', html: '&#10003;', title: 'Did it as planned', onClick: confirmPlanned }) : null)));
         }
+        tbody.append(h('tr', { class: 'ghost-row' },
+          h('td', {}),
+          h('td', { colspan: '2', class: 'plan-adj-cell' },
+            h('span', {
+              class: 'plan-adj',
+              onClick: () => {
+                if (plan.total > ex.sets.length + 1) { plan.total -= 1; ctx.store.saveSession(doc); renderBody(); }
+              },
+            }, '− set'),
+            h('span', {
+              class: 'plan-adj',
+              onClick: () => { plan.total += 1; ctx.store.saveSession(doc); renderBody(); },
+            }, '+ set')),
+          h('td', {}),
+          h('td', {})));
       }
     }
     updateLogCard();
@@ -253,13 +301,47 @@ export async function renderExercise(ctx, sessionId, exerciseId) {
       h('div', { class: 'ex-header-top' },
         h('span', { class: 'ex-back', html: '&#8592;', onClick: () => ctx.router.go({ name: 'session', sessionId }) }),
         h('button', { class: 'done-btn', onClick: () => ctx.router.go({ name: 'session', sessionId }) }, 'Done')),
-      h('div', { class: 'ex-name' }, ex.display_name)),
+      h('div', { class: 'ex-name' }, ex.display_name),
+      specStub(ctx, profile, plan, ex.display_name)),
     exerciseNote(ctx, doc, ex),
     logPane, histPane);
 
   return h('div', { class: 'screen' }, scroll,
     h('div', { class: 'ex-tabs' }, tabLogBtn, tabHistBtn),
     bottomNav('log', ctx));
+}
+
+// The prescription as a ticket stub under the title: the targets you train by
+// (sets×reps, RIR, rest) on the face, and muscles + the standing profile note
+// + the library door behind the perforation. The bucket never shows here —
+// this screen is about today's numbers. Nothing renders without a plan.
+function specStub(ctx, profile, plan, exName) {
+  if (!plan) return null;
+  const muscles = profile && profile.muscles
+    ? [...(profile.muscles.major || []), ...(profile.muscles.minor || [])] : [];
+  const under = h('div', { class: 'stub-under', hidden: true },
+    muscles.length ? h('div', { class: 'stub-muscles' }, muscles.join(' · ')) : null,
+    profile && profile.notes && profile.notes.trim()
+      ? h('div', { class: 'stub-note' }, `"${profile.notes.trim()}"`) : null,
+    h('div', {
+      class: 'stub-link',
+      onClick: (e) => { e.stopPropagation(); ctx.router.go({ name: 'exercise-profile', exName }); },
+    }, 'Edit in library ›'));
+  const tear = h('div', { class: 'stub-tear', hidden: true });
+  const chev = h('span', { class: 'stub-chev' }, '⌄');
+  return h('div', {
+    class: 'spec-stub',
+    onClick: () => {
+      const show = under.hidden;
+      under.hidden = !show;
+      tear.hidden = !show;
+      chev.textContent = show ? '⌃' : '⌄';
+    },
+  },
+  h('div', { class: 'stub-face' },
+    h('span', { class: 'stub-spec' }, `${plan.sets}×${plan.reps} · RIR ${fmtRir(plan.rir)} · Rest ${fmtRest(plan.rest_seconds)}`),
+    chev),
+  tear, under);
 }
 
 // Per-exercise free-text note (WODIS exercise.notes), mirrors the session note.
@@ -279,7 +361,7 @@ function exerciseNote(ctx, doc, ex) {
 
 // ── History tab: this exercise across earlier sessions, newest first ────────
 
-async function buildHistoryPane(ctx, doc, ex, onApply) {
+async function buildHistoryPane(ctx, doc, ex, onApply, plan) {
   const all = await ctx.store.allSessions();
   const name = (ex.display_name || '').trim().toLowerCase();
   const t0 = Date.parse(doc.session.started_at);
@@ -295,7 +377,7 @@ async function buildHistoryPane(ctx, doc, ex, onApply) {
     pane.append(h('div', { class: 'hist-empty' }, 'No earlier sessions of this exercise.'));
     return { pane, count: 0, lastPast };
   }
-  const next = computeNext(hist);
+  const next = computeNext(hist, plan);
   if (next) pane.append(nextCard(next, onApply));
   pane.append(h('div', { class: 'hist-lead' },
     'This exercise · ', h('strong', {}, `${hist.length} session${hist.length !== 1 ? 's' : ''}`), ' on record'));
@@ -366,7 +448,7 @@ function flagsPhrase(f) {
   return parts.join(', ');
 }
 
-function computeNext(hist) {
+function computeNext(hist, plan) {
   const exposures = hist
     .map((x) => ({ when: x.s.started_at, e: summarizeExposure(x.past) }))
     .filter((x) => x.e);
@@ -382,13 +464,16 @@ function computeNext(hist) {
     return { label: 'Low confidence', value: null, reason: `Only ${exposures.length} session${exposures.length !== 1 ? 's' : ''} on record, too little history to suggest. Log what's real.` };
   }
 
-  // Typical set count for this exercise (modal across recent exposures),
-  // used by Apply to lay out planned rows.
-  const planSets = mode(exposures.slice(0, 6).map((x) => x.e.all.length)) || last.e.all.length;
+  // Targets come from the declared plan when the exercise has one (library
+  // bucket + overrides); otherwise reconstructed from history as before.
+  // Set count is used by Apply to lay out planned rows.
+  const planSets = (plan && plan.sets)
+    || mode(exposures.slice(0, 6).map((x) => x.e.all.length)) || last.e.all.length;
 
   const inc = learnIncrement(exposures);
   const cleanMaxes = exposures.slice(0, 6).filter((x) => !x.e.dirty).map((x) => Math.max(...x.e.reps));
-  const target = mode(cleanMaxes) || Math.max(...last.e.reps);
+  const target = (plan && plan.reps) || mode(cleanMaxes) || Math.max(...last.e.reps);
+  const planned = !!(plan && plan.reps);
   const gapDays = Math.floor((Date.now() - Date.parse(last.when)) / 86400000);
 
   if (gapDays > 84) {
@@ -396,21 +481,21 @@ function computeNext(hist) {
     return { label: 'Restart light', value: `~${load}`, load, reason: `${Math.round(gapDays / 7)} weeks since you last did this. Old numbers go stale, so start easy. You'll be back fast. (Layoff sizing is a heuristic, not tested evidence.)` };
   }
   if (gapDays > 28) {
-    return { label: 'Hold', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, planSets, wild: last.e.top + inc, reason: `${Math.round(gapDays / 7)} weeks since you last did this. Strength holds about 4 weeks, so repeat it once before advancing.` };
+    return { label: 'Hold', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, planSets, planned, wild: last.e.top + inc, reason: `${Math.round(gapDays / 7)} weeks since you last did this. Strength holds about 4 weeks, so repeat it once before advancing.` };
   }
   if (last.e.dirty) {
-    return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, planSets, reason: `${did}, but the ${last.e.top} sets included ${flagsPhrase(last.e.flags)}. Earn it clean first.` };
+    return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, planSets, planned, reason: `${did}, but the ${last.e.top} sets included ${flagsPhrase(last.e.flags)}. Earn it clean first.` };
   }
   if (last.e.reps.every((r) => r >= target)) {
-    return { label: 'Progress', value: `${last.e.top + inc} × ${target}`, load: last.e.top + inc, reps: target, planSets, reason: `${did}, all clean, ${ago}. Every set at ${last.e.top} hit ${target} reps, so move up.` };
+    return { label: 'Progress', value: `${last.e.top + inc} × ${target}`, load: last.e.top + inc, reps: target, planSets, planned, reason: `${did}, all clean, ${ago}. Every set at ${last.e.top} hit ${target} reps, so move up.` };
   }
   const p1 = exposures[1];
   const p2 = exposures[2];
   if (p1 && p2 && p1.e.top === last.e.top && p2.e.top === last.e.top
       && last.e.totalReps < p1.e.totalReps && p1.e.totalReps < p2.e.totalReps) {
-    return { label: 'Step back', value: `${last.e.top - inc} × ${target}`, load: last.e.top - inc, reps: target, planSets, reason: `Your total reps at ${last.e.top} have dropped three sessions in a row: ${p2.e.totalReps}, then ${p1.e.totalReps}, then ${last.e.totalReps}. Step back and rebuild.` };
+    return { label: 'Step back', value: `${last.e.top - inc} × ${target}`, load: last.e.top - inc, reps: target, planSets, planned, reason: `Your total reps at ${last.e.top} have dropped three sessions in a row: ${p2.e.totalReps}, then ${p1.e.totalReps}, then ${last.e.totalReps}. Step back and rebuild.` };
   }
-  return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, planSets, wild: last.e.top + inc, reason: `${did}. The target at ${last.e.top}${last.e.hadLighter ? ', your top weight,' : ''} is ${target} reps on every set. Not quite there, so run it back.` };
+  return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, planSets, planned, wild: last.e.top + inc, reason: `${did}. The target at ${last.e.top}${last.e.hadLighter ? ', your top weight,' : ''} is ${target} reps on every set. Not quite there, so run it back.` };
 }
 
 // Design D: scoreboard verdict + wildcard permission line + Apply.
@@ -432,6 +517,13 @@ function nextCard(n, onApply) {
       : null);
 }
 
+// A past exercise's notes: the in-app note, plus the verbatim original note
+// on imported history (which lives in _extra.atomic.import_note, not .notes).
+function histNotes(ex) {
+  const imported = ex._extra && ex._extra.atomic && ex._extra.atomic.import_note;
+  return [ex.notes, imported].map((n) => (n || '').trim()).filter(Boolean);
+}
+
 function histCard(s, ex, latest) {
   const summary = exerciseSetSummary(ex);
   const weights = summary.filter((g) => !g.duration);
@@ -448,7 +540,7 @@ function histCard(s, ex, latest) {
         h('span', { class: 'hc-ago' }, agoLabel(s.started_at))),
       latest ? h('span', { class: 'hc-latest-tag' }, 'Last time') : null),
     sets,
-    ex.notes && ex.notes.trim() ? h('div', { class: 'hc-note' }, ex.notes.trim()) : null);
+    ...histNotes(ex).map((n) => h('div', { class: 'hc-note' }, n)));
 }
 
 // Runs of equal durations collapse to one token ("8 × 0:20"); weight sets pass through.

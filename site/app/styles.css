@@ -325,7 +325,7 @@ body {
 .ec-empty { color: var(--text-tertiary); font-style: italic; }
 
 /* ── Exercise ── */
-.ex-header { padding: calc(32px + var(--safe-top)) 24px 0; }
+.ex-header { padding: calc(32px + var(--safe-top)) 20px 0; }
 .ex-header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
 .ex-back { color: var(--text-secondary); font-size: 22px; cursor: pointer; }
 .ex-name {
@@ -500,6 +500,72 @@ body {
 .hc-failed { color: #FF5252; }
 .hc-drop { color: var(--cyan); font-weight: 600; font-size: 13px; text-shadow: 0 0 4px var(--cyan-glow); white-space: nowrap; }
 .hc-note { font-size: 11.5px; color: var(--text-tertiary); font-style: italic; margin-top: 8px; line-height: 1.4; }
+
+/* ── Prescription stub (exercise header) ── */
+.spec-stub { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin: 12px 0 14px; cursor: pointer; }
+.stub-face { display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
+.stub-spec { font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace; font-size: 11px; letter-spacing: 0.12em; color: var(--text-secondary); text-transform: uppercase; font-variant-numeric: tabular-nums; }
+.stub-chev { margin-left: auto; color: var(--text-tertiary); font-size: 12px; line-height: 1; }
+.stub-tear { border-top: 2px dashed #33343E; margin: 0 8px; }
+.stub-under { padding: 10px 14px 12px; }
+.stub-muscles { font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace; font-size: 11px; letter-spacing: 0.12em; color: var(--text-secondary); text-transform: uppercase; line-height: 1.8; }
+.stub-note { font-size: 12px; font-style: italic; color: var(--text-tertiary); margin-top: 5px; line-height: 1.4; }
+.stub-link { font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace; font-size: 11px; letter-spacing: 0.12em; color: var(--cyan); font-weight: 700; text-transform: uppercase; margin-top: 7px; }
+.ghost-in { width: 62px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-secondary); font-family: inherit; font-size: 15px; font-weight: 700; padding: 5px 8px; text-align: center; font-variant-numeric: tabular-nums; }
+.ghost-in:focus { border-color: var(--cyan); color: var(--text-primary); outline: none; }
+.plan-adj-cell { padding-top: 2px; }
+.plan-adj { font-size: 10px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-tertiary); border: 1px dashed var(--border); border-radius: 8px; padding: 4px 10px; margin-right: 8px; cursor: pointer; }
+.plan-adj:hover { color: var(--text-secondary); }
+
+/* ── Exercise library ── */
+.lib-sub { padding: 0 24px 10px; font-size: 12px; color: var(--text-tertiary); }
+.lib-sub strong { color: var(--volt); font-weight: 800; }
+.lib-body { padding: 0 20px; }
+.lib-search { width: 100%; margin-bottom: 6px; }
+.lib-row { display: flex; align-items: center; gap: 10px; padding: 13px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); cursor: pointer; }
+.lib-row:hover { background: var(--surface-hover); }
+.lib-main { flex: 1; min-width: 0; }
+.lib-name { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lib-meta { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; font-variant-numeric: tabular-nums; }
+.lib-plan { font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--cyan); white-space: nowrap; }
+.lib-plan.none { color: var(--text-tertiary); font-weight: 500; font-style: italic; }
+.lib-arrow { color: var(--text-tertiary); font-size: 15px; }
+.lib-empty { padding: 24px 4px; color: var(--text-tertiary); font-style: italic; font-size: 13px; }
+
+/* ── Exercise profile ── */
+.profile-head { padding-bottom: 0; }
+.profile-back { font-size: 13px; color: var(--text-secondary); cursor: pointer; margin-bottom: 10px; }
+.profile-title { font-size: 24px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; }
+.profile-sub { font-size: 12px; color: var(--text-tertiary); margin-top: 3px; font-variant-numeric: tabular-nums; }
+.bucket-seg { display: flex; gap: 8px; margin-bottom: 12px; transition: opacity 0.15s; }
+.bucket-seg.muted { opacity: 0.45; }
+.b-opt { flex: 1; text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 4px; cursor: pointer; }
+.b-opt .bo-name { font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--text-secondary); }
+.b-opt .bo-scheme { font-size: 10px; color: var(--text-tertiary); margin-top: 3px; font-variant-numeric: tabular-nums; }
+.b-opt.on { background: var(--volt-dim); border-color: rgba(202, 255, 51, 0.4); }
+.b-opt.on .bo-name { color: var(--volt); }
+.b-opt.on .bo-scheme { color: var(--text-secondary); }
+.b-opt.hint { border-style: dashed; border-color: rgba(202, 255, 51, 0.35); }
+.plan-row { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 9px; }
+.pr-label { flex: 1; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-secondary); }
+.pr-val { font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; cursor: pointer; }
+.pr-val.empty { color: var(--text-tertiary); font-weight: 500; font-size: 14px; cursor: default; }
+.pr-input { width: 72px; background: var(--bg); border: 1px solid var(--cyan); border-radius: var(--radius-sm); color: var(--text-primary); font-family: inherit; font-size: 16px; font-weight: 800; padding: 4px 8px; text-align: right; }
+.pr-text { flex: 1.4; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font-family: inherit; font-size: 13px; padding: 7px 10px; }
+.pr-text::placeholder { color: var(--text-tertiary); font-style: italic; }
+.derived-tag { font-size: 8.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-tertiary); }
+.override-tag { font-size: 8.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #C9A24B; }
+.profile-hint { font-size: 11px; color: var(--text-tertiary); line-height: 1.5; margin: 2px 2px 12px; }
+.profile-note { margin-top: 4px; }
+.profile-title-row { display: flex; align-items: baseline; gap: 12px; }
+.profile-rename { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; color: var(--cyan); cursor: pointer; }
+.rename-form { flex: 1; }
+.rename-input { width: 100%; font-size: 16px; font-weight: 700; }
+.rename-actions { display: flex; gap: 8px; margin-top: 8px; }
+.rn-btn { font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; padding: 8px 16px; border-radius: 9px; background: var(--volt); color: #0A0A0F; border: none; font-family: inherit; cursor: pointer; }
+.rn-btn.ghost { background: none; border: 1px solid var(--border); color: var(--text-secondary); }
+.rename-hint { font-size: 11px; color: var(--text-tertiary); margin-top: 7px; line-height: 1.4; }
+.rename-hint.merge { color: #C9A24B; font-weight: 600; }
 
 /* ── Import affordances + toast ── */
 .feed-head { display: flex; align-items: center; justify-content: space-between; padding: 0 24px 12px; }

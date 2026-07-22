@@ -15,7 +15,7 @@ export function bottomNav(active, ctx) {
   return h('div', { class: 'bottom-nav' },
     item('feed', '&#9776;', 'Feed', () => ctx.router.go({ name: 'feed' })),
     item('log', '&#9883;', 'Log', () => ctx.startLog()),
-    item('stats', '&#9779;', 'Stats', () => toast('Stats: coming soon')),
+    item('library', '&#9636;', 'Exercises', () => ctx.router.go({ name: 'library' })),
     item('more', '&#9881;', 'More', () => toast('More: coming soon')),
   );
 }

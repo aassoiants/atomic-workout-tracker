@@ -6,15 +6,28 @@ import { renderFeed } from './screens/feed.js';
 import { renderSession } from './screens/session.js';
 import { renderExercise } from './screens/exercise.js';
 import { renderDetail } from './screens/detail.js';
+import { renderLibrary, renderExerciseProfile } from './screens/library.js';
 import { toast } from './ui.js';
 
 const root = document.getElementById('app');
 let route = { name: 'feed' };
 let draft = null; // a new session held in memory; persisted only once it has content
 
+// Mirror every route change into browser history so the Android back
+// button/gesture walks back through screens instead of exiting the PWA.
+// The feed is the root: back from there leaves the app, as it should.
 const router = {
-  go(next) { route = next; render(); },
+  go(next) {
+    const same = JSON.stringify(next) === JSON.stringify(route);
+    route = next;
+    if (!same) history.pushState(route, '', '');
+    render();
+  },
 };
+window.addEventListener('popstate', (e) => {
+  route = e.state || { name: 'feed' };
+  render();
+});
 
 const ctx = {
   router,
@@ -50,11 +63,20 @@ const ctx = {
         const head = text.trimStart();
         if (head.startsWith('[') || head.startsWith('{')) {
           const { restoreWodis } = await import('./export.js');
-          const { added, skipped } = await restoreWodis(store, text);
+          const res = await restoreWodis(store, text);
           render();
-          toast(added
-            ? `Restored ${added} session${added !== 1 ? 's' : ''}${skipped ? ` · ${skipped} skipped` : ''}`
-            : 'Already up to date');
+          if (res.renames != null) {
+            toast(res.renames
+              ? `Renamed ${res.renames} exercise${res.renames !== 1 ? 's' : ''} · ${res.renameSessions} sessions updated${res.skipped ? ` · ${res.skipped} skipped` : ''}`
+              : 'Renames already applied');
+          } else if (res.profilesAdded != null) {
+            const n = res.profilesAdded + res.profilesUpdated;
+            toast(n ? `Exercise plans: ${res.profilesAdded} added · ${res.profilesUpdated} updated` : 'Exercise plans already up to date');
+          } else {
+            toast(res.added
+              ? `Restored ${res.added} session${res.added !== 1 ? 's' : ''}${res.skipped ? ` · ${res.skipped} skipped` : ''}`
+              : 'Already up to date');
+          }
           return;
         }
         const { reconstruct } = await import('./reconstruct.js');
@@ -99,6 +121,8 @@ async function render() {
     if (route.name === 'session') node = await renderSession(ctx, route.sessionId);
     else if (route.name === 'exercise') node = await renderExercise(ctx, route.sessionId, route.exerciseId);
     else if (route.name === 'detail') node = await renderDetail(ctx, route.sessionId, route.exerciseId, route.setId);
+    else if (route.name === 'library') node = await renderLibrary(ctx);
+    else if (route.name === 'exercise-profile') node = await renderExerciseProfile(ctx, route.exName);
     else node = await renderFeed(ctx);
   } catch (err) {
     node = errorScreen(err);
@@ -130,6 +154,7 @@ async function pruneEmptySessions() {
 }
 
 async function boot() {
+  history.replaceState(route, '', '');
   await store.requestPersistence();
   await pruneEmptySessions();
   await render();

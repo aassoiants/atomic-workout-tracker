@@ -85,7 +85,7 @@ export async function renderExercise(ctx, sessionId, exerciseId) {
     ex._extra.atomic.suggestion = {
       label: next.label, load: next.load,
       ...(next.reps != null ? { reps: next.reps } : {}),
-      rule: 'flag-gated-dp-v1', at: localISO(new Date()),
+      rule: 'flag-gated-dp-v2', at: localISO(new Date()),
     };
   };
 
@@ -387,38 +387,47 @@ async function buildHistoryPane(ctx, doc, ex, onApply, plan) {
 
 // ── "Next" suggestion: flag-gated double progression over the record ────────
 // A derived view with a visible rule, never advice: advance only off a clean
-// exposure that hit the rep target, repeat after grinders, hold after gaps,
-// step back after two sliding exposures. Display-only; shows its work.
+// exposure that hit the rep target, come down when no set even reached it,
+// repeat after grinders, hold after gaps, step back after sliding exposures.
+// Display-only; shows its work.
 
-// One past exposure reduced to its top-load working sets.
+// One past exposure reduced to its top-load working sets. A set's drop
+// portions (↳) don't count as top-load reps, but they do count against
+// cleanliness: stripping the weight mid-set is evidence about the load.
 function summarizeExposure(past) {
   const groups = exerciseSetSummary(past).filter((g) => !g.duration && g.load > 0);
   if (!groups.length) return null;
   const top = Math.max(...groups.map((g) => g.load));
   const at = groups.filter((g) => g.load === top);
-  const flags = { assisted: 0, partial: 0, failed: 0 };
-  at.forEach((g) => { flags.assisted += g.assisted; flags.partial += g.partial; flags.failed += g.failed; });
+  const flags = { assisted: 0, partial: 0, failed: 0, dropsets: 0 };
+  at.forEach((g) => {
+    flags.assisted += g.assisted; flags.partial += g.partial; flags.failed += g.failed;
+    if (g.drops.length) flags.dropsets += 1;
+  });
   return {
     top,
     reps: at.map((g) => g.reps),
     totalReps: at.reduce((n, g) => n + g.reps, 0),
-    dirty: !!(flags.assisted || flags.partial || flags.failed),
+    dirty: !!(flags.assisted || flags.partial || flags.failed || flags.dropsets),
     flags,
     hadLighter: groups.length > at.length,
-    all: groups.map((g) => ({ load: g.load, reps: g.reps })),
+    all: groups.map((g) => ({ load: g.load, reps: g.reps, drops: g.drops.map((d) => ({ load: d.load, reps: d.reps })) })),
   };
 }
 
 // All of an exposure's sets the way a person would say them:
-// "100×12, 120×12 and 120×10" or "3 sets of 185×8".
+// "100×12, 120×12 and 120×10" or "3 sets of 185×8". Drops ride along in the
+// history cards' notation ("90×4 ↳70×3") and block grouping.
 function humanSets(all) {
   const grouped = [];
   for (const s of all) {
     const prev = grouped[grouped.length - 1];
-    if (prev && prev.load === s.load && prev.reps === s.reps) { prev.count += 1; continue; }
-    grouped.push({ load: s.load, reps: s.reps, count: 1 });
+    const drops = s.drops || [];
+    if (prev && !prev.drops.length && !drops.length && prev.load === s.load && prev.reps === s.reps) { prev.count += 1; continue; }
+    grouped.push({ load: s.load, reps: s.reps, count: 1, drops });
   }
-  const words = grouped.map((g) => (g.count > 1 ? `${g.count} sets of ${g.load}×${g.reps}` : `${g.load}×${g.reps}`));
+  const words = grouped.map((g) => (g.count > 1 ? `${g.count} sets of ${g.load}×${g.reps}` : `${g.load}×${g.reps}`)
+    + g.drops.map((d) => ` ↳${d.load}×${d.reps}`).join(''));
   if (words.length <= 1) return words[0] || '';
   return words.slice(0, -1).join(', ') + ' and ' + words[words.length - 1];
 }
@@ -445,6 +454,7 @@ function flagsPhrase(f) {
   if (f.assisted) parts.push(`${f.assisted} assisted rep${f.assisted !== 1 ? 's' : ''}`);
   if (f.partial) parts.push(`${f.partial} partial${f.partial !== 1 ? 's' : ''}`);
   if (f.failed) parts.push(`${f.failed} failed rep${f.failed !== 1 ? 's' : ''}`);
+  if (f.dropsets) parts.push(f.dropsets !== 1 ? `${f.dropsets} dropsets` : 'a dropset');
   return parts.join(', ');
 }
 
@@ -483,6 +493,20 @@ function computeNext(hist, plan) {
   if (gapDays > 28) {
     return { label: 'Hold', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, planSets, planned, wild: last.e.top + inc, reason: `${Math.round(gapDays / 7)} weeks since you last did this. Strength holds about 4 weeks, so repeat it once before advancing.` };
   }
+  // Too heavy: no set at the top weight reached the target, so the load is
+  // ahead of the plan. Size the step down by rep math (Epley: reps trade for
+  // load at ~1/30th of it per rep), rounded to the step this exercise
+  // actually moves in. Checked before cleanliness on purpose: a strip or a
+  // failed rep at this weight is more evidence the load overshot, not a
+  // reason to withhold judgment.
+  const best = Math.max(...last.e.reps);
+  if (best < target) {
+    const estMax = last.e.top * (1 + best / 30);
+    let load = Math.round((estMax / (1 + target / 30)) / inc) * inc;
+    if (load >= last.e.top) load = last.e.top - inc;
+    load = Math.max(load, inc);
+    return { label: 'Too heavy', value: `${load} × ${target}`, load, reps: target, planSets, planned, reason: `${did}. The target at ${last.e.top} is ${target} reps on every set and your best set got ${best}. ${best} at ${last.e.top} is about the same strength as ${target} at ${load}, so go down and take every set.` };
+  }
   if (last.e.dirty) {
     return { label: 'Repeat', value: `${last.e.top} × ${target}`, load: last.e.top, reps: target, planSets, planned, reason: `${did}, but the ${last.e.top} sets included ${flagsPhrase(last.e.flags)}. Earn it clean first.` };
   }
@@ -501,7 +525,7 @@ function computeNext(hist, plan) {
 // Design D: scoreboard verdict + wildcard permission line + Apply.
 function nextCard(n, onApply) {
   const verdict = {
-    'Progress': 'Go up', 'Repeat': 'Again', 'Hold': 'Hold',
+    'Progress': 'Go up', 'Repeat': 'Again', 'Hold': 'Hold', 'Too heavy': 'Go down',
     'Restart light': 'Ease in', 'Step back': 'Step back', 'Low confidence': 'Low confidence',
   }[n.label] || n.label;
   return h('div', { class: 'next-card' },

@@ -860,3 +860,16 @@ body {
 .ex-lattice { display: grid; gap: 5px; }
 .ex-lat-l { font-size: 9px; color: var(--text-tertiary); text-align: center; font-variant-numeric: tabular-nums; }
 .ex-lat-v { text-align: center; font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--volt); }
+
+/* exercise profile: bottom tab bar (Plan · History · Stats) above the nav */
+.ex-tabbar { display: flex; gap: 7px; padding: 9px 12px; border-top: 1px solid var(--border);
+  background: rgba(10, 10, 15, 0.96); }
+.ex-tab { flex: 1; text-align: center; font-family: inherit; font-size: 10px; font-weight: 800;
+  letter-spacing: 1.2px; text-transform: uppercase; padding: 9px 4px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-secondary); cursor: pointer; }
+.ex-tab.on { background: var(--volt-dim); border-color: rgba(202, 255, 51, 0.4); color: var(--volt); }
+.ex-history { padding-top: 4px; }
+.ex-hist-card { margin-bottom: 10px; }
+.ex-hist-date { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  color: var(--text-tertiary); margin-bottom: 5px; }
+.ex-hist-sets { font-size: 12.5px; line-height: 1.6; font-variant-numeric: tabular-nums; color: var(--text-secondary); }

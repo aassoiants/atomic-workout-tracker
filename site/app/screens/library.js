@@ -4,10 +4,10 @@
 // per-number overrides, muscles, note. Overriding any number mutes the bucket
 // selector, so a plan that deviates from the system is visibly a deviation.
 import { h } from '../dom.js';
-import { bottomNav, toast } from '../ui.js';
+import { bottomNav, toast, formatLongDate } from '../ui.js';
 import { BUCKETS, RIR_CHOICES, normalizeName, resolvePlan, suggestBucket, fmtRest, fmtRir } from '../plan.js';
 import { renameExercise } from '../export.js';
-import { tokenMatch, sessionFacts, exerciseStats, daysAgo } from '../rollups.js';
+import { tokenMatch, sessionFacts, exerciseStats, daysAgo, setFacts } from '../rollups.js';
 
 // Aggregate the record by exercise name: how often, how recently, under what
 // display name (most recent spelling wins).
@@ -370,14 +370,70 @@ export async function renderExerciseProfile(ctx, exName) {
   }
   drawTitle();
 
+  // Three panes behind a bottom tab bar: the plan form, the record's history
+  // for this lift, and the live stats. The bar sits directly above the main
+  // nav, in thumb reach.
+  const panes = {
+    plan: body,
+    history: await profileHistory(ctx, exName),
+    stats: await profileStats(ctx, exName),
+  };
+  let tab = 'plan';
+  const tabBtns = {};
+  const labels = { plan: 'Plan', history: 'History', stats: 'Stats' };
+  const syncTabs = () => {
+    for (const [key, pane] of Object.entries(panes)) {
+      pane.hidden = key !== tab;
+      tabBtns[key].classList.toggle('on', key === tab);
+    }
+  };
+  const bar = h('div', { class: 'ex-tabbar' },
+    ...Object.keys(panes).map((key) => {
+      tabBtns[key] = h('button', { class: 'ex-tab', onClick: () => { tab = key; syncTabs(); } }, labels[key]);
+      return tabBtns[key];
+    }));
+  syncTabs();
+
   const scroll = h('div', { class: 'screen-scroll' },
     h('div', { class: 'content profile-head' },
       h('div', { class: 'profile-back', onClick: () => ctx.router.go({ name: 'library' }) }, '‹ Exercises'),
       titleRow,
       h('div', { class: 'profile-sub' }, rec ? `${rec.count} session${rec.count !== 1 ? 's' : ''} · last ${agoLabel(rec.last)}` : 'Not logged yet')),
-    body,
-    await profileStats(ctx, exName));
-  return h('div', { class: 'screen' }, scroll, bottomNav('library', ctx));
+    panes.plan, panes.history, panes.stats);
+  return h('div', { class: 'screen' }, scroll, bar, bottomNav('library', ctx));
+}
+
+// The record's history for one lift: recent sessions, one card each, sets in
+// plain tokens with flags counted.
+async function profileHistory(ctx, exName) {
+  const key = normalizeName(exName);
+  const docs = (await ctx.store.allSessions())
+    .filter((d) => d.session.exercises.some((e) => normalizeName(e.display_name) === key && e.sets.length))
+    .sort((a, b) => Date.parse(b.session.started_at) - Date.parse(a.session.started_at))
+    .slice(0, 20);
+  const wrap = h('div', { class: 'content ex-history' });
+  if (!docs.length) {
+    wrap.append(h('div', { class: 'st-note' }, 'Not logged yet.'));
+    return wrap;
+  }
+  for (const d of docs) {
+    const ex = d.session.exercises.find((e) => normalizeName(e.display_name) === key);
+    const toks = ex.sets.map((set) => {
+      const f = setFacts(set);
+      if (!f) return 'timed';
+      let t = `${f.mainLoad}×${f.mainReps}`;
+      const flags = [];
+      if (f.assisted) flags.push(`${f.assisted} assisted`);
+      if (f.partial) flags.push(`${f.partial} partial`);
+      if (f.failed) flags.push(`${f.failed} failed`);
+      if (flags.length) t += ` (${flags.join(', ')})`;
+      return t;
+    });
+    wrap.append(h('div', { class: 'st-card ex-hist-card' },
+      h('div', { class: 'ex-hist-date' }, formatLongDate(d.session.started_at)),
+      h('div', { class: 'ex-hist-sets' }, toks.join(' · '))));
+  }
+  return wrap;
 }
 
 // Per-exercise stats: the record's answers for this one lift, computed live.

@@ -376,7 +376,7 @@ export async function renderExerciseProfile(ctx, exName) {
   const panes = {
     plan: body,
     history: await profileHistory(ctx, exName),
-    stats: await profileStats(ctx, exName),
+    stats: await exerciseStatsBlock(ctx, exName),
   };
   let tab = 'plan';
   const tabBtns = {};
@@ -387,9 +387,9 @@ export async function renderExerciseProfile(ctx, exName) {
       tabBtns[key].classList.toggle('on', key === tab);
     }
   };
-  const bar = h('div', { class: 'ex-tabbar' },
+  const bar = h('div', { class: 'pf-tabbar' },
     ...Object.keys(panes).map((key) => {
-      tabBtns[key] = h('button', { class: 'ex-tab', onClick: () => { tab = key; syncTabs(); } }, labels[key]);
+      tabBtns[key] = h('button', { class: 'pf-tab', onClick: () => { tab = key; syncTabs(); } }, labels[key]);
       return tabBtns[key];
     }));
   syncTabs();
@@ -437,7 +437,7 @@ async function profileHistory(ctx, exName) {
 }
 
 // Per-exercise stats: the record's answers for this one lift, computed live.
-async function profileStats(ctx, exName) {
+export async function exerciseStatsBlock(ctx, exName) {
   const facts = sessionFacts(await ctx.store.allSessions());
   const st = exerciseStats(facts, exName);
   if (!st.exposures.length) return h('div');

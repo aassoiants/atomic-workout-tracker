@@ -26,7 +26,7 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-html, body { height: 100%; }
+html, body { height: 100%; overscroll-behavior-y: none; }
 
 body {
   background: var(--bg);

@@ -4,6 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0A0A0F">
+<script>
+// Apply the saved theme before the stylesheet paints; More owns the picker.
+try {
+  var t = localStorage.getItem('atomic-theme');
+  if (t === 'berry') {
+    document.documentElement.setAttribute('data-theme', t);
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#1C0913');
+  }
+} catch (e) { /* private mode: volt stands */ }
+</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">

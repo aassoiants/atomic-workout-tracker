@@ -371,7 +371,14 @@ export async function renderStats(ctx) {
   let editing = false;
 
   const board = h('div', { class: 'st-board' });
-  const editBtn = h('button', { class: 'st-edit-btn', onClick: () => { editing = !editing; sync(); } }, 'Edit');
+  const editBtn = h('button', {
+    class: 'st-edit-btn',
+    onClick: () => {
+      if (editing) saveFromDom(); // whatever the board shows is what persists
+      editing = !editing;
+      sync();
+    },
+  }, 'Edit');
   const addBtn = h('button', { class: 'st-add-btn', onClick: () => openPicker() }, '+ Add widget');
 
   function widgetNode(id) {
@@ -417,14 +424,19 @@ export async function renderStats(ctx) {
     document.body.appendChild(overlay);
   }
 
-  // drag to reorder in edit mode
+  // Drag to reorder in edit mode. Listeners live on window, not the handle:
+  // moving a node with insertBefore breaks pointer capture on touch, which
+  // would silently eat the pointerup and the save with it.
+  const saveFromDom = () => {
+    layout = [...board.querySelectorAll('.st-widget')].map((w) => w.dataset.id);
+    saveLayout(layout);
+  };
   board.addEventListener('pointerdown', (e) => {
     const handle = e.target.closest('.st-drag');
     if (!handle || !editing) return;
     e.preventDefault();
     const el = handle.closest('.st-widget');
     el.classList.add('dragging');
-    try { handle.setPointerCapture(e.pointerId); } catch (_) { /* untrusted event */ }
     const move = (ev) => {
       for (const other of board.querySelectorAll('.st-widget')) {
         if (other === el) continue;
@@ -435,18 +447,18 @@ export async function renderStats(ctx) {
           break;
         }
       }
+      saveFromDom();
     };
     const up = () => {
       el.classList.remove('dragging');
-      layout = [...board.querySelectorAll('.st-widget')].map((w) => w.dataset.id);
-      saveLayout(layout);
-      handle.removeEventListener('pointermove', move);
-      handle.removeEventListener('pointerup', up);
-      handle.removeEventListener('pointercancel', up);
+      saveFromDom();
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
     };
-    handle.addEventListener('pointermove', move);
-    handle.addEventListener('pointerup', up);
-    handle.addEventListener('pointercancel', up);
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
   });
 
   sync();

@@ -39,7 +39,7 @@ export async function renderExercise(ctx, sessionId, exerciseId) {
       ctx.store.saveSession(doc);
       renderBody();
     }
-    switchTab(false);
+    switchTab('log');
     repsInput.select();
   }
 

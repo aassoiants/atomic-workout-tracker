@@ -873,3 +873,5 @@ body {
 .ex-hist-date { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
   color: var(--text-tertiary); margin-bottom: 5px; }
 .ex-hist-sets { font-size: 12.5px; line-height: 1.6; font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+
+.ec-flag { color: #C9A24B; font-size: 0.85em; }

@@ -96,11 +96,24 @@ function exerciseCard(ctx, doc, ex) {
         toks.push({ set });
       }
     });
+    const flagText = (g) => {
+      const parts = [];
+      if (g.assisted) parts.push(`${g.assisted} assisted`);
+      if (g.partial) parts.push(`${g.partial} partial`);
+      if (g.failed) parts.push(`${g.failed} failed`);
+      return parts.join(', ');
+    };
     toks.forEach((t, i) => {
       if (i) summaryEl.append(', ');
       if (t.dur != null) { summaryEl.append((t.n > 1 ? `${t.n} × ` : '') + fmtDuration(t.dur)); return; }
       summaryEl.append(`${t.set.load}×${t.set.reps}`);
-      t.set.drops.forEach((d) => summaryEl.append(h('span', { class: 'ec-drop' }, ` ↳${d.load}×${d.reps}`)));
+      const fl = flagText(t.set);
+      if (fl) summaryEl.append(h('span', { class: 'ec-flag' }, ` (${fl})`));
+      t.set.drops.forEach((d) => {
+        summaryEl.append(h('span', { class: 'ec-drop' }, ` ↳${d.load}×${d.reps}`));
+        const dfl = flagText(d);
+        if (dfl) summaryEl.append(h('span', { class: 'ec-flag' }, ` (${dfl})`));
+      });
     });
   }
   let countLabel = `${sets} set${sets !== 1 ? 's' : ''}`;

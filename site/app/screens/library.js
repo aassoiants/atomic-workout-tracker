@@ -396,7 +396,7 @@ export async function renderExerciseProfile(ctx, exName) {
 
   const scroll = h('div', { class: 'screen-scroll' },
     h('div', { class: 'content profile-head' },
-      h('div', { class: 'profile-back', onClick: () => ctx.router.go({ name: 'library' }) }, '‹ Exercises'),
+      h('div', { class: 'profile-back', onClick: () => history.back() }, '‹ Back'),
       titleRow,
       h('div', { class: 'profile-sub' }, rec ? `${rec.count} session${rec.count !== 1 ? 's' : ''} · last ${agoLabel(rec.last)}` : 'Not logged yet')),
     panes.plan, panes.history, panes.stats);

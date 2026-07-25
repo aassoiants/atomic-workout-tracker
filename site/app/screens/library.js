@@ -4,7 +4,7 @@
 // per-number overrides, muscles, note. Overriding any number mutes the bucket
 // selector, so a plan that deviates from the system is visibly a deviation.
 import { h } from '../dom.js';
-import { bottomNav, toast, formatLongDate } from '../ui.js';
+import { bottomNav, toast, formatLongDate, getBodyweight } from '../ui.js';
 import { BUCKETS, RIR_CHOICES, normalizeName, resolvePlan, suggestBucket, fmtRest, fmtRir } from '../plan.js';
 import { renameExercise } from '../export.js';
 import { tokenMatch, sessionFacts, exerciseStats, daysAgo, setFacts } from '../rollups.js';
@@ -483,6 +483,40 @@ export async function exerciseStatsBlock(ctx, exName) {
       h('div', { class: 'ex-lattice', style: `grid-template-columns: repeat(${slots.length}, 1fr)` },
         ...slots.map((s) => h('div', { class: 'ex-lat-l' }, String(s.load))),
         ...slots.map((s) => h('div', { class: 'ex-lat-v' }, String(s.reps))))));
+  }
+
+
+  // Strength standards, big barbell lifts only: an external yardstick in
+  // bodyweight multiples. Ratios are published approximations.
+  const STANDARDS = {
+    'bench press, barbell': [0.5, 0.75, 1.25, 1.75, 2.0],
+    'squat, barbell': [0.75, 1.25, 1.5, 2.0, 2.5],
+    'deadlift, barbell': [1.0, 1.5, 2.0, 2.5, 3.0],
+    'overhead press, barbell': [0.35, 0.55, 0.8, 1.1, 1.4],
+  };
+  const tiers = STANDARDS[normalizeName(exName)];
+  const bestE1 = Math.max(0, ...st.repRecords.map((x) => x.load * (1 + x.reps / 30)));
+  if (tiers && bestE1) {
+    const bw = getBodyweight();
+    const names = ['Untrained', 'Novice', 'Interm.', 'Adv.', 'Elite'];
+    const span = tiers[4] * 1.12;
+    const cardEl = h('div', { class: 'st-card' },
+      h('div', { class: 'st-label' }, h('span', {}, 'Standards'),
+        h('span', { class: 'st-sub' }, bw ? 'at ' + bw.v + ' ' + bw.unit + ' · external yardstick' : 'external yardstick')));
+    if (!bw) {
+      cardEl.append(h('div', { class: 'st-note' }, 'Standards are bodyweight multiples and no bodyweight is on record.'),
+        h('button', { class: 'st-set-bw', onClick: () => ctx.router.go({ name: 'more' }) }, 'Set bodyweight'));
+    } else {
+      const lbs = bw.unit === 'kg' ? bw.v * 2.2046 : bw.v;
+      const ratio = bestE1 / lbs;
+      cardEl.append(
+        h('div', { class: 'st-ruler' },
+          h('div', { class: 'st-ruler-fill', style: 'width:' + Math.min(ratio / span * 100, 100) + '%' }),
+          ...tiers.map((r) => h('div', { class: 'st-ruler-tick', style: 'left:' + (r / span * 100) + '%' }))),
+        h('div', { class: 'st-ruler-labels' }, ...names.map((n) => h('span', {}, n))),
+        h('div', { class: 'st-note' }, 'Best clean estimate ~' + Math.round(bestE1) + ', ' + ratio.toFixed(2) + ' times bodyweight. Published standards, not a verdict.'));
+    }
+    wrap.append(cardEl);
   }
 
   wrap.append(h('div', { class: 'st-card' },

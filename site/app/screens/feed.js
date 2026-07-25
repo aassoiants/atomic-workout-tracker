@@ -11,8 +11,6 @@ export async function renderFeed(ctx) {
     h('div', { class: 'home-header' },
       h('div', { class: 'home-logo', html: 'AT<span>O</span>MIC' }),
       h('div', { class: 'home-subtitle' }, 'The rep is the atomic unit')),
-    h('button', { class: 'log-new-btn', onClick: () => ctx.newSession() },
-      h('span', {}, '+'), ' Log New Session'),
     h('div', { class: 'feed-head' },
       h('div', { class: 'feed-label' }, 'Recent Sessions'),
       h('div', { class: 'feed-links' },

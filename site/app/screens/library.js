@@ -7,6 +7,7 @@ import { h } from '../dom.js';
 import { bottomNav, toast } from '../ui.js';
 import { BUCKETS, RIR_CHOICES, normalizeName, resolvePlan, suggestBucket, fmtRest, fmtRir } from '../plan.js';
 import { renameExercise } from '../export.js';
+import { tokenMatch, sessionFacts, exerciseStats, daysAgo } from '../rollups.js';
 
 // Aggregate the record by exercise name: how often, how recently, under what
 // display name (most recent spelling wins).
@@ -71,7 +72,7 @@ export async function renderLibrary(ctx) {
   const profMuscles = (p) => (p && p.muscles ? [...(p.muscles.major || []), ...(p.muscles.minor || [])] : []);
 
   function matches(r) {
-    if (query && !r.key.includes(query)) return false;
+    if (query && !tokenMatch(query, r.key)) return false;
     const p = profByName.get(r.key);
     const plan = resolvePlan(p);
     if (facets.plan === 'planned' && !plan) return false;
@@ -374,6 +375,66 @@ export async function renderExerciseProfile(ctx, exName) {
       h('div', { class: 'profile-back', onClick: () => ctx.router.go({ name: 'library' }) }, '‹ Exercises'),
       titleRow,
       h('div', { class: 'profile-sub' }, rec ? `${rec.count} session${rec.count !== 1 ? 's' : ''} · last ${agoLabel(rec.last)}` : 'Not logged yet')),
-    body);
+    body,
+    await profileStats(ctx, exName));
   return h('div', { class: 'screen' }, scroll, bottomNav('library', ctx));
+}
+
+// Per-exercise stats: the record's answers for this one lift, computed live.
+async function profileStats(ctx, exName) {
+  const facts = sessionFacts(await ctx.store.allSessions());
+  const st = exerciseStats(facts, exName);
+  if (!st.exposures.length) return h('div');
+  const wrap = h('div', { class: 'content ex-stats' });
+  const fmtD = (iso) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
+    if (!m) return '';
+    return `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][+m[2] - 1] } ${+m[3]} ’${m[1].slice(2)}`;
+  };
+  const last = st.exposures[st.exposures.length - 1];
+  const ago = daysAgo(last.date);
+
+  wrap.append(h('div', { class: 'ex-facts' },
+    h('div', { class: 'ex-fact' }, h('div', { class: 'ex-fv volt' }, String(st.maxLoad)), h('div', { class: 'ex-fl' }, 'Top load')),
+    h('div', { class: 'ex-fact' }, h('div', { class: 'ex-fv' }, String(st.exposures.length)), h('div', { class: 'ex-fl' }, 'Exposures')),
+    h('div', { class: 'ex-fact' }, h('div', { class: 'ex-fv' }, ago === 0 ? 'today' : `${ago}d`), h('div', { class: 'ex-fl' }, 'Since last'))));
+
+  // Top set per exposure, last 12, as bars.
+  const recent = st.exposures.slice(-12);
+  const max = Math.max(...recent.map((e) => e.topLoad), 1);
+  wrap.append(h('div', { class: 'st-card' },
+    h('div', { class: 'st-label' }, h('span', {}, 'Top set'), h('span', { class: 'st-sub' }, `last ${recent.length} exposures`)),
+    h('div', { class: 'st-bars', style: 'height:56px' },
+      ...recent.map((e, i) => h('div', {
+        class: 'st-bar' + (i === recent.length - 1 ? ' hi' : ''),
+        style: `height:${Math.max(e.topLoad / max * 100, 4)}%`,
+      }))),
+    h('div', { class: 'st-axis' }, h('span', {}, fmtD(recent[0].date)), h('span', {}, `${last.topLoad}×${last.topReps}`))));
+
+  // Records, clean sets only.
+  const topRec = st.repRecords.length ? st.repRecords[st.repRecords.length - 1] : null;
+  wrap.append(h('div', { class: 'st-card' },
+    h('div', { class: 'st-label' }, h('span', {}, 'Records'), h('span', { class: 'st-sub' }, 'clean sets only')),
+    h('div', { class: 'st-lrow' }, h('span', { class: 'st-ln mut' }, 'Heaviest load'), h('span', { class: 'st-lv' }, `${st.maxLoad} lb`), h('span', { class: 'st-ld' }, fmtD(st.maxLoadDate))),
+    st.bestSV.v ? h('div', { class: 'st-lrow' }, h('span', { class: 'st-ln mut' }, 'Best set volume'), h('span', { class: 'st-lv' }, st.bestSV.label), h('span', { class: 'st-ld' }, fmtD(st.bestSV.date))) : null,
+    topRec ? h('div', { class: 'st-lrow' }, h('span', { class: 'st-ln mut' }, `Most reps at ${topRec.load}`), h('span', { class: 'st-lv' }, String(topRec.reps)), h('span', { class: 'st-ld' }, fmtD(topRec.date))) : null));
+
+  // Best clean reps at each load, heaviest 8 slots.
+  const slots = st.repRecords.slice(-8);
+  if (slots.length > 2) {
+    wrap.append(h('div', { class: 'st-card' },
+      h('div', { class: 'st-label' }, h('span', {}, 'Best clean reps at each load')),
+      h('div', { class: 'ex-lattice', style: `grid-template-columns: repeat(${slots.length}, 1fr)` },
+        ...slots.map((s) => h('div', { class: 'ex-lat-l' }, String(s.load))),
+        ...slots.map((s) => h('div', { class: 'ex-lat-v' }, String(s.reps))))));
+  }
+
+  wrap.append(h('div', { class: 'st-card' },
+    h('div', { class: 'st-label' }, h('span', {}, 'All time')),
+    h('div', { class: 'ex-facts' },
+      h('div', { class: 'ex-fact' }, h('div', { class: 'ex-fv volt' }, st.lifeTon.toLocaleString()), h('div', { class: 'ex-fl' }, 'Honest lb')),
+      h('div', { class: 'ex-fact' }, h('div', { class: 'ex-fv' }, st.lifeReps.toLocaleString()), h('div', { class: 'ex-fl' }, 'Reps')),
+      h('div', { class: 'ex-fact' }, h('div', { class: 'ex-fv' }, fmtD(st.exposures[0].date)), h('div', { class: 'ex-fl' }, 'First log')))));
+
+  return wrap;
 }

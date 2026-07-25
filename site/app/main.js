@@ -7,6 +7,7 @@ import { renderSession } from './screens/session.js';
 import { renderExercise } from './screens/exercise.js';
 import { renderDetail } from './screens/detail.js';
 import { renderLibrary, renderExerciseProfile } from './screens/library.js';
+import { renderStats } from './screens/stats.js';
 import { toast } from './ui.js';
 
 const root = document.getElementById('app');
@@ -122,12 +123,28 @@ async function render() {
     else if (route.name === 'detail') node = await renderDetail(ctx, route.sessionId, route.exerciseId, route.setId);
     else if (route.name === 'library') node = await renderLibrary(ctx);
     else if (route.name === 'exercise-profile') node = await renderExerciseProfile(ctx, route.exName);
+    else if (route.name === 'stats') node = await renderStats(ctx);
     else node = await renderFeed(ctx);
   } catch (err) {
     node = errorScreen(err);
   }
   clear(root);
   if (node) root.append(node);
+  syncFab();
+}
+
+// Floating Log New button, bottom right above the nav: capture stays one
+// thumb tap from the browsing screens and out of the way everywhere else.
+let fab = null;
+function syncFab() {
+  if (!fab) {
+    fab = document.createElement('button');
+    fab.className = 'log-fab';
+    fab.innerHTML = '<span>+</span> Log new';
+    fab.onclick = () => ctx.startLog();
+    document.body.appendChild(fab);
+  }
+  fab.style.display = ['feed', 'stats', 'library'].includes(route.name) ? '' : 'none';
 }
 
 function errorScreen(err) {

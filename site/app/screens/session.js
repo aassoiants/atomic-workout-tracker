@@ -6,6 +6,7 @@ import {
   sessionTonnage, sessionSetCount, sessionReps, sessionNumber, localISO,
 } from '../model.js';
 import { openSharePreview } from '../share.js';
+import { tokenMatch } from '../rollups.js';
 
 const SHARE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"/><path d="M8 8l4-4 4 4"/><path d="M5 13v5a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3v-5"/></svg>';
 
@@ -42,11 +43,9 @@ export async function renderSession(ctx, sessionId) {
 
   if (!s.ended_at) {
     scroll.append(h('button', { class: 'finish-btn', onClick: () => finishAndGo(ctx, doc) }, 'Finish Session'));
-  } else {
-    scroll.append(h('button', { class: 'share-session-btn', html: SHARE_ICON, onClick: () => openSharePreview(ctx, doc) }, 'Share Session'));
   }
 
-  return h('div', { class: 'screen' }, scroll, bottomNav('log', ctx));
+  return h('div', { class: 'screen' }, scroll, bottomNav('feed', ctx));
 }
 
 // Running totals for the session, shown at the top. Hidden until something's logged.
@@ -157,7 +156,7 @@ function openExercisePicker(names, onPick) {
   const renderList = () => {
     clear(list);
     const q = input.value.trim().toLowerCase();
-    const matches = q ? names.filter((n) => n.toLowerCase().includes(q)) : names;
+    const matches = q ? names.filter((n) => tokenMatch(q, n)) : names;
     const exact = q && names.some((n) => n.toLowerCase() === q);
     if (q && !exact) {
       list.append(h('div', { class: 'picker-item picker-new', onClick: () => pick(input.value) }, `+ Add “${input.value.trim()}”`));

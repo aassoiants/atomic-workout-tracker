@@ -16,8 +16,54 @@ export function bottomNav(active, ctx) {
     item('feed', '&#9776;', 'Feed', () => ctx.router.go({ name: 'feed' })),
     item('stats', '&#9638;', 'Stats', () => ctx.router.go({ name: 'stats' })),
     item('library', '&#9636;', 'Exercises', () => ctx.router.go({ name: 'library' })),
-    item('more', '&#9881;', 'More', () => toast('More: coming soon')),
+    item('more', '&#9881;', 'More', () => ctx.router.go({ name: 'more' })),
   );
+}
+
+// ── Bodyweight ─────────────────────────────────────────────────────────────
+// Lives on the device (localStorage): it feeds derived views like strength
+// standards and is not part of the training record.
+export function getBodyweight() {
+  try {
+    const b = JSON.parse(localStorage.getItem('atomic-bodyweight'));
+    return b && b.v > 0 ? b : null;
+  } catch (_) { return null; }
+}
+
+export function bodyweightCard() {
+  const cur = getBodyweight();
+  let unit = cur ? cur.unit : 'lbs';
+  const input = h('input', {
+    class: 'bw-input', type: 'number', inputmode: 'decimal',
+    placeholder: 'Bodyweight', value: cur ? String(cur.v) : '',
+  });
+  const unitBtns = {};
+  const setUnit = (u) => {
+    unit = u;
+    unitBtns.lbs.classList.toggle('on', u === 'lbs');
+    unitBtns.kg.classList.toggle('on', u === 'kg');
+  };
+  unitBtns.lbs = h('button', { class: 'bw-unit', onClick: () => setUnit('lbs') }, 'lbs');
+  unitBtns.kg = h('button', { class: 'bw-unit', onClick: () => setUnit('kg') }, 'kg');
+  const saved = h('div', { class: 'bw-sub' },
+    cur ? `On record: ${cur.v} ${cur.unit} (${cur.at})` : 'Not set yet.');
+  const save = h('button', {
+    class: 'bw-save',
+    onClick: () => {
+      const v = parseFloat(input.value);
+      if (!(v > 0)) { toast('Enter a number'); return; }
+      try {
+        localStorage.setItem('atomic-bodyweight', JSON.stringify({ v, unit, at: new Date().toISOString().slice(0, 10) }));
+      } catch (_) { /* device pref only */ }
+      toast('Bodyweight saved');
+      history.back();
+    },
+  }, 'Save');
+  setUnit(unit);
+  return h('div', { class: 'st-card bw-card' },
+    h('div', { class: 'bw-row' }, input, unitBtns.lbs, unitBtns.kg),
+    h('div', { class: 'bw-sub' }, 'Weigh in the morning, after the bathroom, before coffee. Same conditions every time.'),
+    save, saved);
 }
 
 // Wall-clock date/time parsed straight from the stored local-offset ISO, so it

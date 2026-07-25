@@ -3,7 +3,7 @@
 // order) is a device preference in localStorage. Cards state data and never
 // explain themselves; outside yardsticks carry a visible tag.
 import { h } from '../dom.js';
-import { bottomNav, toast } from '../ui.js';
+import { bottomNav, toast, getBodyweight } from '../ui.js';
 import {
   MUSCLES, GROWTH_RANGES, sessionFacts, trainedDays, runHistogram, weeklyAgg,
   weekKey, weekSeq, daysAgo, muscleMap, muscleWeekly, weightedWeekSets, recordFeed,
@@ -289,6 +289,34 @@ const WIDGETS = {
         h('div', { class: 'st-prog' }, h('div', { class: 'st-prog-fill', style: `width:${pct}%` })));
     },
   },
+  standards: {
+    name: 'Strength standards', shelf: 'bests + state',
+    render(d, ctx) {
+      let e1 = 0;
+      for (const f of d.facts) {
+        for (const ex of f.exs) {
+          if ((ex.name || '').trim().toLowerCase() !== 'bench press, barbell') continue;
+          for (const s of ex.facts) if (s.clean) e1 = Math.max(e1, s.mainLoad * (1 + s.mainReps / 30));
+        }
+      }
+      if (!e1) return null;
+      const bw = getBodyweight();
+      if (!bw) {
+        return card('Bench standards', 'external yardstick',
+          note('Standards are bodyweight multiples and no bodyweight is on record.'),
+          h('button', { class: 'st-set-bw', onClick: () => ctx.router.go({ name: 'more' }) }, 'Set bodyweight'));
+      }
+      const lbs = bw.unit === 'kg' ? bw.v * 2.2046 : bw.v;
+      const ratio = e1 / lbs;
+      const TIERS = [['Untrained', 0.5], ['Novice', 0.75], ['Interm.', 1.25], ['Adv.', 1.75], ['Elite', 2.0]];
+      return card('Bench standards', 'at ' + bw.v + ' ' + bw.unit + ' · external yardstick',
+        h('div', { class: 'st-ruler' },
+          h('div', { class: 'st-ruler-fill', style: 'width:' + Math.min(ratio / 2.25 * 100, 100) + '%' }),
+          ...TIERS.map(([, r]) => h('div', { class: 'st-ruler-tick', style: 'left:' + (r / 2.25 * 100) + '%' }))),
+        h('div', { class: 'st-ruler-labels' }, ...TIERS.map(([n]) => h('span', {}, n))),
+        note('Best clean estimate ~' + Math.round(e1) + ', ' + ratio.toFixed(2) + ' times bodyweight. Published standards, not a verdict.'));
+    },
+  },
 };
 
 // ── layout persistence ─────────────────────────────────────────────────────
@@ -383,7 +411,7 @@ export async function renderStats(ctx) {
 
   function widgetNode(id) {
     let inner = null;
-    try { inner = WIDGETS[id].render(data); } catch (_) { inner = null; }
+    try { inner = WIDGETS[id].render(data, ctx); } catch (_) { inner = null; }
     if (!inner) {
       inner = card(WIDGETS[id].name, null, note('Nothing to show yet.'));
     }

@@ -22,10 +22,14 @@ export async function buildExportDocs(store) {
 // branch below. Sessions stay pure WODIS documents inside their section.
 export async function buildCarton(store) {
   return {
-    format: 'atomic-carton/2',
+    format: 'atomic-carton/3',
     exported_at: localISO(new Date()),
     sessions: await buildExportDocs(store),
     exercise_profiles: await store.allProfiles(),
+    // Deletions ride along as records. Without them a merge only sees the
+    // sessions that exist, so any older copy of the file puts a deleted
+    // session straight back.
+    deleted_sessions: await store.allDeleted(),
   };
 }
 
@@ -74,28 +78,59 @@ export async function restoreWodis(store, text) {
   if (parsed && Array.isArray(parsed.atomic_renames)) {
     return applyRenames(store, parsed.atomic_renames);
   }
-  // Typed carton: each section restores through its own handler.
+  // Typed carton: each section restores through its own handler. Deletions go
+  // first, so a session and its own tombstone in the same file settle as
+  // deleted rather than by section order.
   if (parsed && typeof parsed.format === 'string' && parsed.format.startsWith('atomic-carton')) {
+    const d = await restoreDeletions(store, Array.isArray(parsed.deleted_sessions) ? parsed.deleted_sessions : []);
     const s = await restoreSessions(store, Array.isArray(parsed.sessions) ? parsed.sessions : []);
     const p = await restoreProfiles(store, Array.isArray(parsed.exercise_profiles) ? parsed.exercise_profiles : []);
-    return { added: s.added, profilesAdded: p.profilesAdded, profilesUpdated: p.profilesUpdated, skipped: s.skipped + p.skipped };
+    return {
+      added: s.added,
+      removed: d.removed,
+      profilesAdded: p.profilesAdded,
+      profilesUpdated: p.profilesUpdated,
+      skipped: s.skipped + p.skipped,
+    };
   }
   return restoreSessions(store, Array.isArray(parsed) ? parsed : [parsed]);
 }
 
 async function restoreSessions(store, docs) {
   const have = new Set((await store.allSessions()).map((d) => d.session.id));
+  const gone = new Set((await store.allDeleted()).map((t) => t.id));
   let added = 0;
   let skipped = 0;
   for (const raw of docs) {
     if (!raw || !raw.session || !Array.isArray(raw.session.exercises)) { skipped += 1; continue; }
     const doc = fromWODIS(raw);
     if (have.has(doc.session.id)) continue;
+    // Deleted here already: an older copy of the file still carrying it is not
+    // news, it is the state we left behind.
+    if (gone.has(doc.session.id)) { skipped += 1; continue; }
     await store.saveSession(doc);
     have.add(doc.session.id);
     added += 1;
   }
   return { added, skipped };
+}
+
+// Deletions made anywhere apply everywhere: record the tombstone, and remove
+// the session if this device still holds it. Returns how many were removed
+// here, so a device that only reads can say what left.
+async function restoreDeletions(store, list) {
+  const known = new Set((await store.allDeleted()).map((t) => t.id));
+  const have = new Set((await store.allSessions()).map((d) => d.session.id));
+  let removed = 0;
+  for (const t of list) {
+    const id = t && typeof t.id === 'string' ? t.id : null;
+    if (!id) continue;
+    if (known.has(id) && !have.has(id)) continue;
+    await store.deleteSession(id, t.deleted_at);
+    known.add(id);
+    if (have.has(id)) { have.delete(id); removed += 1; }
+  }
+  return { removed };
 }
 
 // Rename an exercise everywhere: every session document (the file is the

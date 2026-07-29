@@ -76,6 +76,7 @@ const ctx = {
             if (res.added) parts.push(`${res.added} session${res.added !== 1 ? 's' : ''}`);
             const plans = (res.profilesAdded || 0) + (res.profilesUpdated || 0);
             if (plans) parts.push(`${plans} exercise plan${plans !== 1 ? 's' : ''}`);
+            if (res.removed) parts.push(`${res.removed} deleted elsewhere`);
             toast(parts.length ? `Restored ${parts.join(' · ')}` : 'Already up to date');
           }
           return;
@@ -96,7 +97,7 @@ const ctx = {
           const same = byDate.get(doc.session.started_at.slice(0, 10)) || [];
           const olds = same.filter((d) => d.meta && d.meta.source === 'imported-csv');
           if (same.length && !olds.length) continue;
-          for (const old of olds) await store.deleteSession(old.session.id);
+          for (const old of olds) await store.dropSession(old.session.id);
           await store.saveSession(doc);
           if (olds.length) refreshed += 1; else added += 1;
         }
@@ -167,7 +168,7 @@ async function pruneEmptySessions() {
         const s = d.session;
         return !s.ended_at && s.exercises.length === 0 && !(s.notes && s.notes.trim());
       })
-      .map((d) => store.deleteSession(d.session.id)));
+      .map((d) => store.dropSession(d.session.id)));
   } catch (_) { /* best-effort cleanup */ }
 }
 

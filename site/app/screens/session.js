@@ -25,8 +25,7 @@ export async function renderSession(ctx, sessionId) {
           h('span', { class: 'session-date', title: 'Edit start time', onClick: () => editStartTime(ctx, doc) },
             `${sessionNoLabel(num)} · ${formatLongDate(s.started_at)}`)),
         h('div', { class: 'session-header-actions' },
-          h('button', { class: 'session-share', 'aria-label': 'Share session', title: 'Share session', html: SHARE_ICON, onClick: () => openSharePreview(ctx, doc) }),
-          s.ended_at ? null : h('button', { class: 'done-btn', onClick: () => finishAndGo(ctx, doc) }, 'Done')))),
+          h('button', { class: 'session-share', 'aria-label': 'Share session', title: 'Share session', html: SHARE_ICON, onClick: () => openSharePreview(ctx, doc) })))),
     sessionRollup(doc),
     noteArea(ctx, doc),
   );

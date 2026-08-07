@@ -528,6 +528,9 @@ body {
 .stub-link { font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace; font-size: 12px; letter-spacing: 0.12em; color: var(--cyan); font-weight: 700; text-transform: uppercase; margin-top: 7px; }
 .ghost-in { width: 62px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-secondary); font-family: inherit; font-size: 15px; font-weight: 700; padding: 5px 8px; text-align: center; font-variant-numeric: tabular-nums; }
 .ghost-in:focus { border-color: var(--cyan); color: var(--text-primary); outline: none; }
+/* Logged-set in-place edit: reads as the plain table number until touched. */
+.set-in { width: 62px; background: transparent; border: 1px solid transparent; border-radius: var(--radius-sm); color: var(--text-primary); font-family: inherit; font-size: 15px; font-weight: 700; padding: 5px 8px; text-align: center; font-variant-numeric: tabular-nums; }
+.set-in:focus { background: var(--bg); border-color: var(--cyan); outline: none; }
 .plan-adj-cell { padding-top: 2px; }
 .plan-adj { font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-tertiary); border: 1px dashed var(--border); border-radius: 8px; padding: 4px 10px; margin-right: 8px; cursor: pointer; }
 .plan-adj:hover { color: var(--text-secondary); }

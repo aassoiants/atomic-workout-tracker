@@ -205,12 +205,19 @@ export function exerciseSetSummary(ex) {
 }
 
 // Recompute reps_completed and set_type after editing a set's reps[].
+// A uniform plain array (every rep at the set's load, no flags) says nothing
+// beyond load × reps_completed, so it collapses back to scalar form: the rep
+// array exists only where reality diverged.
 export function syncSet(set) {
   if (!Array.isArray(set.reps)) return set;
   set.reps_completed = set.reps.filter((r) => r.completed !== false).length;
   const loads = new Set(set.reps.map((r) => Number(r.load)));
   if (loads.size > 1) set.set_type = 'dropset';
   else if (set.set_type === 'dropset') delete set.set_type;
+  if (set.reps.every((r) => Number(r.load) === Number(set.load)
+      && !r.assisted && !r.partial && r.completed !== false)) {
+    delete set.reps;
+  }
   return set;
 }
 

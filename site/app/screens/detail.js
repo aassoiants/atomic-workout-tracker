@@ -2,7 +2,7 @@
 // Failure maps to WODIS completed:false; assisted/partial are rep flags.
 import { h, clear } from '../dom.js';
 import { bottomNav } from '../ui.js';
-import { findExercise, syncSet } from '../model.js';
+import { findExercise, setReps, syncSet } from '../model.js';
 
 const FLAGS = [
   { key: 'assisted', label: 'Assisted', cls: 'assisted', icon: '✦' },
@@ -27,20 +27,23 @@ export async function renderDetail(ctx, sessionId, exerciseId, setId) {
   const unit = doc.session.load_unit;
   const setIndex = ex.sets.indexOf(set) + 1;
 
-  // Materialize reps in-memory for editing; only persisted once something changes.
-  if (!Array.isArray(set.reps)) {
-    set.reps = Array.from({ length: Math.max(0, set.reps_completed | 0) }, () => ({ load: set.load }));
-  }
+  // The screen edits a working copy of the reps; every save writes it into the
+  // set (setReps) and lets syncSet collapse a uniform plain array back to
+  // scalar form — so a detail visit that adds nothing beyond load × count
+  // never marks the set as detailed.
+  const reps = Array.isArray(set.reps)
+    ? set.reps
+    : Array.from({ length: Math.max(0, set.reps_completed | 0) }, () => ({ load: set.load }));
 
   const scroll = h('div', { class: 'screen-scroll' });
   const rows = h('div', { class: 'rep-rows' });
   const title = h('div', { class: 'detail-title' });
-  const repNext = h('span', { class: 'set-num' }, String(set.reps.length + 1));
-  const renderTitle = () => { title.innerHTML = `Set ${setIndex} &middot; <span class="rep-count">${set.reps.length} Reps</span>`; };
+  const repNext = h('span', { class: 'set-num' }, String(reps.length + 1));
+  const renderTitle = () => { title.innerHTML = `Set ${setIndex} &middot; <span class="rep-count">${reps.length} Reps</span>`; };
 
   let popover = null;
   const closePopover = () => { if (popover) { popover.remove(); popover = null; } };
-  const save = () => { syncSet(set); ctx.store.saveSession(doc); };
+  const save = () => { setReps(set, reps); syncSet(set); ctx.store.saveSession(doc); };
 
   function repRow(rep, i) {
     const changed = Number(rep.load) !== Number(set.load);
@@ -81,22 +84,22 @@ export async function renderDetail(ctx, sessionId, exerciseId, setId) {
 
   function deleteRep(rep) {
     closePopover();
-    if (set.reps.length <= 1) return;
-    const idx = set.reps.indexOf(rep);
-    if (idx > -1) set.reps.splice(idx, 1);
+    if (reps.length <= 1) return;
+    const idx = reps.indexOf(rep);
+    if (idx > -1) reps.splice(idx, 1);
     refreshRows();
     save();
   }
 
   function refreshRows() {
     clear(rows);
-    set.reps.forEach((rep, i) => rows.append(repRow(rep, i)));
+    reps.forEach((rep, i) => rows.append(repRow(rep, i)));
     renderTitle();
-    repNext.textContent = String(set.reps.length + 1);
+    repNext.textContent = String(reps.length + 1);
   }
   refreshRows();
 
-  const lastLoad = set.reps.length ? set.reps[set.reps.length - 1].load : set.load;
+  const lastLoad = reps.length ? reps[reps.length - 1].load : set.load;
   const weightInput = h('input', { class: 'input-field', type: 'number', inputmode: 'decimal', value: lastLoad });
   const preselect = new Set();
   const tagRow = h('div', { class: 'tags' });
@@ -114,10 +117,10 @@ export async function renderDetail(ctx, sessionId, exerciseId, setId) {
     if (preselect.has('assisted')) rep.assisted = true;
     if (preselect.has('partial')) rep.partial = true;
     if (preselect.has('failure')) rep.completed = false;
-    set.reps.push(rep);
-    rows.append(repRow(rep, set.reps.length - 1));
+    reps.push(rep);
+    rows.append(repRow(rep, reps.length - 1));
     renderTitle();
-    repNext.textContent = String(set.reps.length + 1);
+    repNext.textContent = String(reps.length + 1);
     weightInput.value = rep.load;
     preselect.clear();
     tagRow.querySelectorAll('.tag').forEach((t) => t.classList.remove('active'));

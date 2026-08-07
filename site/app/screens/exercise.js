@@ -140,12 +140,32 @@ export async function renderExercise(ctx, sessionId, exerciseId) {
         return;
       }
       const sum = setSummary(set);
-      const detailed = Array.isArray(set.reps) && set.reps.length > 0;
+      // The dot on ⋯ marks per-rep detail that says something beyond
+      // load × reps — a drop, a flag, a failed attempt. A uniform plain
+      // array (legacy saves before syncSet collapsed them) doesn't count.
+      const detailed = Array.isArray(set.reps) && set.reps.some((r) =>
+        Number(r.load) !== Number(set.load) || r.assisted || r.partial || r.completed === false);
       const hasDrops = sum.drops.length > 0;
+      // A set without diverged rep detail stays editable in place after
+      // logging — a confirmed planned row is a fact you can still correct.
+      // Once reps diverge, the truth lives in the rep view, so edits go there.
+      const setEdit = (field) => h('input', {
+        class: 'set-in', type: 'number', inputmode: field === 'load' ? 'decimal' : 'numeric',
+        value: field === 'load' ? String(set.load) : String(sum.reps),
+        onChange: async (e) => {
+          const n = Number(e.target.value);
+          const ok = isFinite(n) && (field === 'load' ? n >= 0 : (Number.isInteger(n) && n > 0));
+          if (!ok) { e.target.value = field === 'load' ? String(set.load) : String(sum.reps); return; }
+          if (field === 'load') set.load = n; else set.reps_completed = n;
+          delete set.reps; // any lingering uniform array is now stale; load × reps rules
+          await ctx.store.saveSession(doc);
+          renderBody();
+        },
+      });
       tbody.append(h('tr', { class: hasDrops ? 'has-detail' : '' },
         h('td', { class: 'set-num-cell' }, String(i + 1)),
-        h('td', {}, String(set.load)),
-        h('td', {}, String(sum.reps)),
+        h('td', {}, detailed ? String(set.load) : setEdit('load')),
+        h('td', {}, detailed ? String(sum.reps) : setEdit('reps')),
         h('td', {}, h('span', {
           class: 'more-dots' + (detailed ? ' detailed' : ''), html: '⋯',
           onClick: () => ctx.router.go({ name: 'detail', sessionId, exerciseId, setId: set.id }),

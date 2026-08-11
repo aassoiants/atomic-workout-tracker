@@ -76,6 +76,7 @@ const ctx = {
             if (res.added) parts.push(`${res.added} session${res.added !== 1 ? 's' : ''}`);
             const plans = (res.profilesAdded || 0) + (res.profilesUpdated || 0);
             if (plans) parts.push(`${plans} exercise plan${plans !== 1 ? 's' : ''}`);
+            if (res.bodyweightsAdded) parts.push(`${res.bodyweightsAdded} weigh-in${res.bodyweightsAdded !== 1 ? 's' : ''}`);
             if (res.removed) parts.push(`${res.removed} deleted elsewhere`);
             toast(parts.length ? `Restored ${parts.join(' · ')}` : 'Already up to date');
           }

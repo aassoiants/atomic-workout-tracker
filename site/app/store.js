@@ -6,12 +6,15 @@
 // v3 adds 'deleted': a tombstone per session the owner deleted. A merge can
 // see records, never absences, so a deletion has to be a record of its own or
 // any restore (a backup file, a sync pull) hands the session back.
+// v4 adds 'bodyweights': one dated weigh-in per day, so derived views can use
+// the bodyweight that was true when a set was logged, not just today's.
 
 const DB_NAME = 'atomic';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const STORE = 'sessions';
 const PROFILES = 'exercises';
 const DELETED = 'deleted';
+const BODYWEIGHTS = 'bodyweights';
 
 let dbPromise = null;
 
@@ -29,6 +32,9 @@ function openDB() {
       }
       if (!db.objectStoreNames.contains(DELETED)) {
         db.createObjectStore(DELETED, { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains(BODYWEIGHTS)) {
+        db.createObjectStore(BODYWEIGHTS, { keyPath: 'date' });
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -134,6 +140,26 @@ export async function allProfiles() {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const req = db.transaction(PROFILES, 'readonly').objectStore(PROFILES).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// One weigh-in per day, last write wins: {date: 'YYYY-MM-DD', v, unit}.
+export async function saveBodyweight(entry) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const t = db.transaction(BODYWEIGHTS, 'readwrite');
+    t.objectStore(BODYWEIGHTS).put(entry);
+    t.oncomplete = () => resolve(entry);
+    t.onerror = () => reject(t.error);
+  });
+}
+
+export async function allBodyweights() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction(BODYWEIGHTS, 'readonly').objectStore(BODYWEIGHTS).getAll();
     req.onsuccess = () => resolve(req.result || []);
     req.onerror = () => reject(req.error);
   });

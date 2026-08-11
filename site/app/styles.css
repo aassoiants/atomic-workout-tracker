@@ -34,7 +34,6 @@
   --tear: #33343E;
   --heat-l1: #55701F;
   --heat-l2: #8FBC26;
-  --ruler-from: #2E3A17;
   --radius: 10px;
   --radius-sm: 6px;
   --safe-top: env(safe-area-inset-top, 0px);
@@ -906,11 +905,19 @@ body {
   background: var(--volt); color: var(--accent-ink); font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase;
   font-size: 13px; cursor: pointer; }
 .bw-card { margin: 0 20px; }
-.st-ruler { position: relative; height: 10px; background: var(--well); border-radius: 5px; margin: 8px 2px 6px; }
-.st-ruler-fill { height: 100%; border-radius: 5px; background: linear-gradient(90deg, var(--ruler-from), var(--volt)); }
-.st-ruler-tick { position: absolute; top: -3px; bottom: -3px; width: 2px; background: #4A4A52; }
-.st-ruler-labels { display: flex; justify-content: space-between; font-size: 10px; letter-spacing: 1px;
-  text-transform: uppercase; color: var(--text-tertiary); }
+/* Where you stand: story sentence + one crowd row per source. */
+.wys-story { font-size: 13px; line-height: 1.6; color: var(--text-secondary); margin-bottom: 10px; }
+.wys-story b { color: var(--text-primary); font-weight: 800; font-variant-numeric: tabular-nums; }
+.wys-row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 5px; }
+.wys-pct { font-size: 13px; font-weight: 800; color: var(--volt); }
+.wys-of { font-size: 11.5px; color: var(--text-secondary); }
+.wys-bar { position: relative; height: 8px; border-radius: 4px; background: var(--well); }
+.wys-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: rgba(var(--volt-rgb), 0.45); }
+.wys-mark { position: absolute; top: -3px; bottom: -3px; width: 2px; border-radius: 1px; background: var(--volt);
+  box-shadow: 0 0 8px var(--volt-dim); }
+.cmp-row { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+.cmp-row input { margin-top: 3px; accent-color: var(--volt); }
+.sex-chip { text-transform: none; }
 .st-set-bw { margin-top: 10px; font-family: inherit; padding: 11px 16px; border-radius: 12px;
   border: 1px solid rgba(var(--volt-rgb), 0.35); background: transparent; color: var(--volt); font-weight: 800;
   letter-spacing: 1px; text-transform: uppercase; font-size: 12px; cursor: pointer; }
@@ -942,7 +949,6 @@ body {
   --tear: #4E2440;
   --heat-l1: #6E2449;
   --heat-l2: #C4498A;
-  --ruler-from: #45152F;
   --radius: 14px;
   --radius-sm: 8px;
 }
@@ -969,8 +975,8 @@ body {
   -webkit-background-clip: text; background-clip: text; color: transparent;
   text-shadow: none;
 }
-[data-theme="berry"] .st-ruler-fill {
-  background: linear-gradient(90deg, var(--ruler-from), #FF5FA8 70%, #FF9E6B);
+[data-theme="berry"] .wys-fill {
+  background: linear-gradient(90deg, rgba(255, 95, 168, 0.4), rgba(255, 158, 107, 0.5));
 }
 
 /* ── More: Appearance picker ── */

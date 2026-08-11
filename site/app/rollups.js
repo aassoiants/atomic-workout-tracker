@@ -47,6 +47,27 @@ export function daysAgo(iso, now = new Date()) {
   return Math.round((today - then) / 86400000);
 }
 
+// Bodyweight in lbs on a given date, from the dated weigh-in log: linear
+// between the two nearest weigh-ins, nearest known at the ends, null when the
+// log is empty. Entries are {date: 'YYYY-MM-DD', v, unit}.
+export function bodyweightOn(entries, dateIso) {
+  const list = (entries || [])
+    .filter((b) => b && b.date && b.v > 0)
+    .map((b) => ({ date: b.date, lbs: b.unit === 'kg' ? b.v * 2.2046 : b.v }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (!list.length) return null;
+  const d = dayKey(dateIso);
+  if (d <= list[0].date) return list[0].lbs;
+  if (d >= list[list.length - 1].date) return list[list.length - 1].lbs;
+  let i = 1;
+  while (list[i].date < d) i += 1;
+  const a = list[i - 1];
+  const b = list[i];
+  const span = Date.parse(b.date) - Date.parse(a.date);
+  const f = span > 0 ? (Date.parse(d) - Date.parse(a.date)) / span : 0;
+  return a.lbs + (b.lbs - a.lbs) * f;
+}
+
 // Facts about one set under the accounting rules.
 export function setFacts(set) {
   if (isDurationSet(set)) return null;

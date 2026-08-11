@@ -172,10 +172,23 @@ async function pruneEmptySessions() {
   } catch (_) { /* best-effort cleanup */ }
 }
 
+// One-time seed: the pre-v4 single bodyweight value (localStorage) becomes the
+// first entry of the dated weigh-in log, at the date it was saved.
+async function seedBodyweightLog() {
+  try {
+    if ((await store.allBodyweights()).length) return;
+    const b = JSON.parse(localStorage.getItem('atomic-bodyweight'));
+    if (b && b.v > 0 && b.at) {
+      await store.saveBodyweight({ date: b.at, v: b.v, unit: b.unit === 'kg' ? 'kg' : 'lbs' });
+    }
+  } catch (_) { /* best-effort seed */ }
+}
+
 async function boot() {
   history.replaceState(route, '', '');
   await store.requestPersistence();
   await pruneEmptySessions();
+  await seedBodyweightLog();
   await render();
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});

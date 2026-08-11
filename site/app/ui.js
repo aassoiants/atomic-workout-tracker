@@ -21,8 +21,10 @@ export function bottomNav(active, ctx) {
 }
 
 // ── Bodyweight ─────────────────────────────────────────────────────────────
-// Lives on the device (localStorage): it feeds derived views like strength
-// standards and is not part of the training record.
+// The latest value lives in localStorage as a fast synchronous cache; every
+// save also appends to the dated weigh-in log in the store (one entry per
+// day), which rides the carton so derived views can use the bodyweight that
+// was true when a set was logged.
 export function getBodyweight() {
   try {
     const b = JSON.parse(localStorage.getItem('atomic-bodyweight'));
@@ -30,7 +32,55 @@ export function getBodyweight() {
   } catch (_) { return null; }
 }
 
-export function bodyweightCard() {
+// ── Standards lens: sex + age ──────────────────────────────────────────────
+// Device-side viewer settings (localStorage). They parameterize which
+// published reference table a derived view reads; they are not part of the
+// training record and never ride the carton.
+export function getSex() {
+  try {
+    const s = localStorage.getItem('atomic-sex');
+    return s === 'male' || s === 'female' ? s : null;
+  } catch (_) { return null; }
+}
+
+export function getAge() {
+  try {
+    const a = parseInt(localStorage.getItem('atomic-age'), 10);
+    return a > 0 && a < 120 ? a : null;
+  } catch (_) { return null; }
+}
+
+export function standardsLensCard() {
+  const chips = {};
+  const select = (key) => {
+    try {
+      if (getSex() === key) { localStorage.removeItem('atomic-sex'); key = null; }
+      else localStorage.setItem('atomic-sex', key);
+    } catch (_) { /* device pref only */ }
+    for (const k of Object.keys(chips)) chips[k].classList.toggle('on', k === key);
+  };
+  for (const s of ['male', 'female']) {
+    chips[s] = h('button', { class: 'bw-unit sex-chip', onClick: () => select(s) }, s === 'male' ? 'Male' : 'Female');
+  }
+  const cur = getSex();
+  if (cur) chips[cur].classList.add('on');
+  const age = h('input', {
+    class: 'bw-input', type: 'number', inputmode: 'numeric', placeholder: 'Age (optional)',
+    value: getAge() ? String(getAge()) : '',
+    onChange: (e) => {
+      const a = parseInt(e.target.value, 10);
+      try {
+        if (a > 0 && a < 120) localStorage.setItem('atomic-age', String(a));
+        else localStorage.removeItem('atomic-age');
+      } catch (_) { /* device pref only */ }
+    },
+  });
+  return h('div', { class: 'st-card bw-card' },
+    h('div', { class: 'bw-row' }, chips.male, chips.female, age),
+    h('div', { class: 'bw-sub' }, 'Only used to pick which published strength table your lifts are compared against. Age waits for age-graded tables. This device only.'));
+}
+
+export function bodyweightCard(ctx) {
   const cur = getBodyweight();
   let unit = cur ? cur.unit : 'lbs';
   const input = h('input', {
@@ -49,12 +99,14 @@ export function bodyweightCard() {
     cur ? `On record: ${cur.v} ${cur.unit} (${cur.at})` : 'Not set yet.');
   const save = h('button', {
     class: 'bw-save',
-    onClick: () => {
+    onClick: async () => {
       const v = parseFloat(input.value);
       if (!(v > 0)) { toast('Enter a number'); return; }
+      const today = new Date().toISOString().slice(0, 10);
       try {
-        localStorage.setItem('atomic-bodyweight', JSON.stringify({ v, unit, at: new Date().toISOString().slice(0, 10) }));
-      } catch (_) { /* device pref only */ }
+        localStorage.setItem('atomic-bodyweight', JSON.stringify({ v, unit, at: today }));
+      } catch (_) { /* cache only */ }
+      if (ctx && ctx.store) await ctx.store.saveBodyweight({ date: today, v, unit });
       toast('Bodyweight saved');
       history.back();
     },

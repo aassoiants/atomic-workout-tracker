@@ -22,7 +22,7 @@ export async function buildExportDocs(store) {
 // branch below. Sessions stay pure WODIS documents inside their section.
 export async function buildCarton(store) {
   return {
-    format: 'atomic-carton/3',
+    format: 'atomic-carton/4',
     exported_at: localISO(new Date()),
     sessions: await buildExportDocs(store),
     exercise_profiles: await store.allProfiles(),
@@ -30,6 +30,9 @@ export async function buildCarton(store) {
     // sessions that exist, so any older copy of the file puts a deleted
     // session straight back.
     deleted_sessions: await store.allDeleted(),
+    // Dated weigh-ins, so a reader device can place old sets at the bodyweight
+    // that was true when they were logged.
+    bodyweights: await store.allBodyweights(),
   };
 }
 
@@ -85,11 +88,13 @@ export async function restoreWodis(store, text) {
     const d = await restoreDeletions(store, Array.isArray(parsed.deleted_sessions) ? parsed.deleted_sessions : []);
     const s = await restoreSessions(store, Array.isArray(parsed.sessions) ? parsed.sessions : []);
     const p = await restoreProfiles(store, Array.isArray(parsed.exercise_profiles) ? parsed.exercise_profiles : []);
+    const b = await restoreBodyweights(store, Array.isArray(parsed.bodyweights) ? parsed.bodyweights : []);
     return {
       added: s.added,
       removed: d.removed,
       profilesAdded: p.profilesAdded,
       profilesUpdated: p.profilesUpdated,
+      bodyweightsAdded: b.added,
       skipped: s.skipped + p.skipped,
     };
   }
@@ -131,6 +136,20 @@ async function restoreDeletions(store, list) {
     if (have.has(id)) { have.delete(id); removed += 1; }
   }
   return { removed };
+}
+
+// A weigh-in is one fact per day; a date already on record here wins over the
+// file (the device that logged it is the authority on its own morning).
+async function restoreBodyweights(store, list) {
+  const have = new Set((await store.allBodyweights()).map((b) => b.date));
+  let added = 0;
+  for (const b of list) {
+    if (!b || typeof b.date !== 'string' || !(b.v > 0) || have.has(b.date)) continue;
+    await store.saveBodyweight({ date: b.date, v: b.v, unit: b.unit === 'kg' ? 'kg' : 'lbs' });
+    have.add(b.date);
+    added += 1;
+  }
+  return { added };
 }
 
 // Rename an exercise everywhere: every session document (the file is the

@@ -4,10 +4,11 @@
 // per-number overrides, muscles, note. Overriding any number mutes the bucket
 // selector, so a plan that deviates from the system is visibly a deviation.
 import { h } from '../dom.js';
-import { bottomNav, toast, formatLongDate, getBodyweight } from '../ui.js';
+import { bottomNav, toast, formatLongDate, getSex } from '../ui.js';
 import { BUCKETS, RIR_CHOICES, normalizeName, resolvePlan, suggestBucket, fmtRest, fmtRir } from '../plan.js';
 import { renameExercise } from '../export.js';
-import { tokenMatch, sessionFacts, exerciseStats, daysAgo, setFacts } from '../rollups.js';
+import { tokenMatch, sessionFacts, exerciseStats, daysAgo, setFacts, bodyweightOn } from '../rollups.js';
+import { liftFor, thresholdsFor, placement, STANDARDS_SOURCE } from '../standards.js';
 
 // Aggregate the record by exercise name: how often, how recently, under what
 // display name (most recent spelling wins).
@@ -325,6 +326,21 @@ export async function renderExerciseProfile(ctx, exName) {
     });
     note.value = profile.notes || '';
     body.append(h('div', { class: 'note-area profile-note' }, note));
+
+    // Comparisons opt-out: for lifts whose logged load doesn't mean what the
+    // reference tables assume (plates only vs a loaded bar), the honest move
+    // is no comparison at all. Rides the profile, so it syncs.
+    if (liftFor(exName)) {
+      const box = h('input', {
+        type: 'checkbox',
+        onChange: async (e) => { profile.compare_excluded = e.target.checked || undefined; await save(); },
+      });
+      box.checked = !!profile.compare_excluded;
+      body.append(h('label', { class: 'plan-row cmp-row' }, box,
+        h('div', {},
+          h('div', { class: 'pr-label' }, 'Exclude from comparisons'),
+          h('div', { class: 'profile-hint', style: 'margin:2px 0 0' }, 'Hides the Where you stand card when this lift’s logged load doesn’t match how the published tables measure it.'))));
+    }
   }
   drawBody();
 
@@ -486,35 +502,51 @@ export async function exerciseStatsBlock(ctx, exName) {
   }
 
 
-  // Strength standards, big barbell lifts only: an external yardstick in
-  // bodyweight multiples. Ratios are published approximations.
-  const STANDARDS = {
-    'bench press, barbell': [0.5, 0.75, 1.25, 1.75, 2.0],
-    'squat, barbell': [0.75, 1.25, 1.5, 2.0, 2.5],
-    'deadlift, barbell': [1.0, 1.5, 2.0, 2.5, 3.0],
-    'overhead press, barbell': [0.35, 0.55, 0.8, 1.1, 1.4],
-  };
-  const tiers = STANDARDS[normalizeName(exName)];
-  const bestE1 = Math.max(0, ...st.repRecords.map((x) => x.load * (1 + x.reps / 30)));
-  if (tiers && bestE1) {
-    const bw = getBodyweight();
-    const names = ['Untrained', 'Novice', 'Interm.', 'Adv.', 'Elite'];
-    const span = tiers[4] * 1.12;
+  // Where you stand: the best clean estimated 1RM placed among the people who
+  // log the same lift, from published crowd tables. A source renders only if
+  // it has a table for this lift; no crowd, no card. Reps cap at 10 in the
+  // estimate (an n>10 set proves the load for 10, and the formula is only
+  // validated to 10), so high-rep records give a floor, never a boast.
+  const lift = liftFor(exName);
+  const profile = await ctx.store.getProfile(normalizeName(exName));
+  const best = st.repRecords.reduce((acc, r) => {
+    const load = lift && lift.per_hand ? r.load / 2 : r.load;
+    const e1 = load * (1 + Math.min(r.reps, 10) / 30);
+    return !acc || e1 > acc.e1 ? { load: r.load, reps: r.reps, date: r.date, e1 } : acc;
+  }, null);
+  if (lift && best && best.e1 > 0 && !(profile && profile.compare_excluded)) {
+    const fmtFull = (iso) => {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
+      if (!m) return '';
+      return `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][+m[2] - 1]} ${+m[3]}, ${m[1]}`;
+    };
+    const sex = getSex();
+    const bwLbs = bodyweightOn(await ctx.store.allBodyweights(), best.date);
     const cardEl = h('div', { class: 'st-card' },
-      h('div', { class: 'st-label' }, h('span', {}, 'Standards'),
-        h('span', { class: 'st-sub' }, bw ? 'at ' + bw.v + ' ' + bw.unit + ' · external yardstick' : 'external yardstick')));
-    if (!bw) {
-      cardEl.append(h('div', { class: 'st-note' }, 'Standards are bodyweight multiples and no bodyweight is on record.'),
-        h('button', { class: 'st-set-bw', onClick: () => ctx.router.go({ name: 'more' }) }, 'Set bodyweight'));
-    } else {
-      const lbs = bw.unit === 'kg' ? bw.v * 2.2046 : bw.v;
-      const ratio = bestE1 / lbs;
+      h('div', { class: 'st-label' }, h('span', {}, 'Where you stand'),
+        h('span', { class: 'st-sub' }, 'vs this lift’s loggers')));
+    if (!sex || !bwLbs) {
       cardEl.append(
-        h('div', { class: 'st-ruler' },
-          h('div', { class: 'st-ruler-fill', style: 'width:' + Math.min(ratio / span * 100, 100) + '%' }),
-          ...tiers.map((r) => h('div', { class: 'st-ruler-tick', style: 'left:' + (r / span * 100) + '%' }))),
-        h('div', { class: 'st-ruler-labels' }, ...names.map((n) => h('span', {}, n))),
-        h('div', { class: 'st-note' }, 'Best clean estimate ~' + Math.round(bestE1) + ', ' + ratio.toFixed(2) + ' times bodyweight. Published standards, not a verdict.'));
+        h('div', { class: 'st-note' }, !sex && !bwLbs
+          ? 'The tables are split by sex and bodyweight and neither is set.'
+          : (!sex ? 'The tables are split by sex and yours isn’t set.' : 'The tables are split by bodyweight and no weigh-in is on record.')),
+        h('button', { class: 'st-set-bw', onClick: () => ctx.router.go({ name: 'more' }) }, 'Set it in More'));
+    } else {
+      const pl = placement(best.e1, thresholdsFor(lift.slug, sex, bwLbs));
+      const fill = pl.kind === 'in' ? pl.pct : (pl.kind === 'over' ? 100 : 3);
+      cardEl.append(
+        h('div', { class: 'wys-story' },
+          'Your best clean set ', h('b', {}, `${best.load}×${best.reps}`),
+          ', logged ', h('b', {}, fmtFull(best.date)),
+          ', puts your estimated 1RM near ', h('b', {}, String(Math.round(best.e1))),
+          lift.per_hand ? ' per dumbbell' : '', ', at ', h('b', {}, `${Math.round(bwLbs)} lb`), ' bodyweight.'),
+        h('div', { class: 'wys-row' },
+          h('span', { class: 'wys-pct' }, `ahead of ${pl.label}`),
+          h('span', { class: 'wys-of' }, 'of people who log this lift')),
+        h('div', { class: 'wys-bar' },
+          h('div', { class: 'wys-fill', style: `width:${fill}%` }),
+          h('div', { class: 'wys-mark', style: `left:${fill}%` })),
+        h('div', { class: 'st-note' }, STANDARDS_SOURCE));
     }
     wrap.append(cardEl);
   }

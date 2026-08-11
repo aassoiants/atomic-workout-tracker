@@ -1,7 +1,7 @@
 // More: app-level tools that don't belong on the feed. Bodyweight feeds
 // derived views like strength standards; Appearance holds the theme picker.
 import { h } from '../dom.js';
-import { bottomNav, bodyweightCard, toast } from '../ui.js';
+import { bottomNav, bodyweightCard, standardsLensCard, toast } from '../ui.js';
 
 const THEMES = [
   { key: 'volt',  name: 'Volt',  sub: 'the original', dots: ['#0A0A0F', '#CAFF33', '#00E5FF'] },
@@ -49,6 +49,8 @@ export async function renderMore(ctx) {
     h('div', { class: 'feed-head' }, h('div', { class: 'feed-label' }, 'Appearance')),
     appearanceCard(),
     h('div', { class: 'feed-head', style: 'margin-top:22px' }, h('div', { class: 'feed-label' }, 'Bodyweight')),
-    bodyweightCard());
+    bodyweightCard(ctx),
+    h('div', { class: 'feed-head', style: 'margin-top:22px' }, h('div', { class: 'feed-label' }, 'Standards lens')),
+    standardsLensCard());
   return h('div', { class: 'screen' }, scroll, bottomNav('more', ctx));
 }

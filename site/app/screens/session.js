@@ -1,8 +1,10 @@
-// Session screen: note, exercise list with live summaries, timer, finish.
+// Session screen: note, exercise list with live summaries. There is no finish
+// act: logging is the declaration, and a session closes by going quiet
+// (see isLive in model.js).
 import { h, clear } from '../dom.js';
 import { bottomNav, formatLongDate, formatTime, fmtDuration, TRASH_ICON, sessionNoLabel } from '../ui.js';
 import {
-  addExercise, finishSession, exerciseSetSummary, exerciseCounts,
+  addExercise, exerciseSetSummary, exerciseCounts,
   sessionTonnage, sessionSetCount, sessionReps, sessionNumber, localISO,
 } from '../model.js';
 import { openSharePreview } from '../share.js';
@@ -39,10 +41,6 @@ export async function renderSession(ctx, sessionId) {
   scroll.append(
     h('button', { class: 'add-exercise-btn', onClick: () => addExerciseFlow(ctx, doc) },
       h('span', {}, '+'), ' Add Exercise'));
-
-  if (!s.ended_at) {
-    scroll.append(h('button', { class: 'finish-btn', onClick: () => finishAndGo(ctx, doc) }, 'Finish Session'));
-  }
 
   return h('div', { class: 'screen' }, scroll, bottomNav('feed', ctx));
 }
@@ -228,18 +226,6 @@ async function deleteExercise(ctx, doc, ex) {
   if (i > -1) doc.session.exercises.splice(i, 1);
   await ctx.store.saveSession(doc);
   ctx.router.go({ name: 'session', sessionId: doc.session.id });
-}
-
-async function finishAndGo(ctx, doc) {
-  const s = doc.session;
-  // Nothing logged → don't persist an empty session.
-  if (!s.exercises.length && !(s.notes && s.notes.trim())) {
-    ctx.router.go({ name: 'feed' });
-    return;
-  }
-  finishSession(doc);
-  await ctx.store.saveSession(doc);
-  ctx.router.go({ name: 'feed' });
 }
 
 // (session duration / live timer removed — total time isn't a reliable number,

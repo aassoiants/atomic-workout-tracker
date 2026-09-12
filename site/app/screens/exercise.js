@@ -27,7 +27,7 @@ export async function renderExercise(ctx, sessionId, exerciseId) {
   // Apply: load the suggestion into the input row, lay out planned rows at
   // the exercise's usual set count, and jump to the Log tab. Plans are
   // scaffolding, not sets: a row becomes a fact only when confirmed (✓) or
-  // logged, and unconfirmed rows are stripped when the session finishes.
+  // logged, and unconfirmed rows are stripped once the session has closed.
   function applySuggestion(n) {
     if (durationMode) { durationMode = false; applyMode(); }
     if (n.load != null) weightInput.value = String(n.load);

@@ -49,7 +49,6 @@ function sessionCard(ctx, doc, number) {
     h('div', { class: 'sc-bottom' },
       h('span', { class: 'sc-stat', html: `<strong>${sessionTonnage(doc).toLocaleString()}</strong> ${s.load_unit}` }),
       h('span', { class: 'sc-stat', html: `<strong>${sets}</strong> set${sets !== 1 ? 's' : ''}` }),
-      s.ended_at ? null : h('span', { class: 'sc-live' }, 'In progress'),
       h('button', {
         class: 'sc-del', 'aria-label': 'Delete session', title: 'Delete session', html: TRASH_ICON,
         onClick: (e) => { e.stopPropagation(); deleteSessionCard(ctx, doc); },

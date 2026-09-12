@@ -100,13 +100,35 @@ function normalizeRep(r, fallbackLoad) {
   return rep;
 }
 
-export function finishSession(doc) {
-  if (!doc.session.ended_at) doc.session.ended_at = nowISO();
-  // Planned rows are scaffolding, never facts; they don't outlive the session.
-  for (const ex of doc.session.exercises) {
-    if (ex._extra && ex._extra.atomic && ex._extra.atomic.plan) delete ex._extra.atomic.plan;
+// There is no finish act. A session is live while logging can still be going
+// on: something in it started within the last LIVE_WINDOW_MS. After that gap
+// the session has closed by itself, and the next LOG NEW opens a fresh one.
+// Sets carry no timestamps, so the latest exercise start stands in for the
+// last activity. Imported sessions carry ended_at and are never live.
+export const LIVE_WINDOW_MS = 4 * 60 * 60 * 1000;
+
+export function lastActivity(doc) {
+  const s = doc.session;
+  let t = Date.parse(s.started_at) || 0;
+  for (const ex of s.exercises) {
+    const e = Date.parse(ex.started_at);
+    if (e > t) t = e;
   }
-  return doc;
+  return t;
+}
+
+export function isLive(doc, now = Date.now()) {
+  return !doc.session.ended_at && now - lastActivity(doc) < LIVE_WINDOW_MS;
+}
+
+// Planned rows are scaffolding, never facts; they don't outlive the session.
+// Returns true when something was removed (the caller saves).
+export function stripPlans(doc) {
+  let removed = false;
+  for (const ex of doc.session.exercises) {
+    if (ex._extra && ex._extra.atomic && ex._extra.atomic.plan) { delete ex._extra.atomic.plan; removed = true; }
+  }
+  return removed;
 }
 
 export function findExercise(doc, exId) {

@@ -1,7 +1,7 @@
 // Bootstrap + a tiny in-memory router. Each route renders one screen into #app.
 import { clear } from './dom.js';
 import * as store from './store.js';
-import { createSession } from './model.js';
+import { createSession, isLive, stripPlans } from './model.js';
 import { renderFeed } from './screens/feed.js';
 import { renderSession } from './screens/session.js';
 import { renderExercise } from './screens/exercise.js';
@@ -40,11 +40,11 @@ const ctx = {
     draft = createSession();
     router.go({ name: 'session', sessionId: draft.session.id });
   },
-  // Resume the most recent in-progress session (only content-ful ones are
+  // Resume the most recent live session (only content-ful ones are
   // persisted), or start a fresh in-memory one.
   async startLog() {
     const live = (await store.allSessions())
-      .filter((d) => !d.session.ended_at)
+      .filter((d) => isLive(d))
       .sort((a, b) => Date.parse(b.session.started_at) - Date.parse(a.session.started_at))[0];
     if (live) { router.go({ name: 'session', sessionId: live.session.id }); return; }
     draft = createSession();
@@ -173,6 +173,17 @@ async function pruneEmptySessions() {
   } catch (_) { /* best-effort cleanup */ }
 }
 
+// A session that has gone quiet has closed. Planned rows left in it were
+// scaffolding for a session that is over, so they come out of the record.
+async function closeQuietSessions() {
+  try {
+    const all = await store.allSessions();
+    await Promise.all(all
+      .filter((d) => !isLive(d) && stripPlans(d))
+      .map((d) => store.saveSession(d)));
+  } catch (_) { /* best-effort cleanup */ }
+}
+
 // One-time seed: the pre-v4 single bodyweight value (localStorage) becomes the
 // first entry of the dated weigh-in log, at the date it was saved.
 async function seedBodyweightLog() {
@@ -189,6 +200,7 @@ async function boot() {
   history.replaceState(route, '', '');
   await store.requestPersistence();
   await pruneEmptySessions();
+  await closeQuietSessions();
   await seedBodyweightLog();
   await render();
   if ('serviceWorker' in navigator) {

@@ -100,11 +100,12 @@ function normalizeRep(r, fallbackLoad) {
   return rep;
 }
 
-// There is no finish act. A session is live while logging can still be going
-// on: something in it started within the last LIVE_WINDOW_MS. After that gap
-// the session has closed by itself, and the next LOG NEW opens a fresh one.
-// Sets carry no timestamps, so the latest exercise start stands in for the
-// last activity. Imported sessions carry ended_at and are never live.
+// There is no finish act, and LOG NEW always opens a fresh session. A session
+// is live while logging can still be going on: something in it started within
+// the last LIVE_WINDOW_MS. After that gap it has closed by itself, and the only
+// thing that hangs on that is housekeeping (planned rows come out of a closed
+// session). Sets carry no timestamps, so the latest exercise start stands in
+// for the last activity. Imported sessions carry ended_at and are never live.
 export const LIVE_WINDOW_MS = 4 * 60 * 60 * 1000;
 
 export function lastActivity(doc) {

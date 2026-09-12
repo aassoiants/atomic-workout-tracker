@@ -34,19 +34,11 @@ window.addEventListener('popstate', (e) => {
 const ctx = {
   router,
   store,
-  // Hold the new session in memory; it isn't written until something is logged,
-  // so backing out doesn't litter the feed with empty in-progress sessions.
+  // LOG NEW always starts a brand new session (owner law 2026-09-12); an
+  // earlier session is reopened from the feed on purpose, never by resuming.
+  // The draft is held in memory and isn't written until something is logged,
+  // so backing out doesn't litter the feed with empty sessions.
   async newSession() {
-    draft = createSession();
-    router.go({ name: 'session', sessionId: draft.session.id });
-  },
-  // Resume the most recent live session (only content-ful ones are
-  // persisted), or start a fresh in-memory one.
-  async startLog() {
-    const live = (await store.allSessions())
-      .filter((d) => isLive(d))
-      .sort((a, b) => Date.parse(b.session.started_at) - Date.parse(a.session.started_at))[0];
-    if (live) { router.go({ name: 'session', sessionId: live.session.id }); return; }
     draft = createSession();
     router.go({ name: 'session', sessionId: draft.session.id });
   },
@@ -145,7 +137,7 @@ function syncFab() {
     fab = document.createElement('button');
     fab.className = 'log-fab';
     fab.innerHTML = '<span>+</span> Log new';
-    fab.onclick = () => ctx.startLog();
+    fab.onclick = () => ctx.newSession();
     document.body.appendChild(fab);
   }
   fab.style.display = ['feed', 'stats', 'library'].includes(route.name) ? '' : 'none';

@@ -319,6 +319,17 @@ async function shareCard(widgetEl, title) {
   clone.style.marginBottom = '0';
   wrap.appendChild(clone);
   document.body.appendChild(wrap);
+  // A card that scrolls sideways on the phone (the year heat) must not clip in
+  // the image: widen the frame by the hidden width and let it overflow.
+  let hidden = 0;
+  for (const el of clone.querySelectorAll('*')) {
+    const ox = getComputedStyle(el).overflowX;
+    if ((ox === 'auto' || ox === 'scroll') && el.scrollWidth > el.clientWidth) {
+      hidden = Math.max(hidden, el.scrollWidth - el.clientWidth);
+      el.style.overflow = 'visible';
+    }
+  }
+  if (hidden) wrap.style.width = `${380 + hidden}px`;
   const rect = wrap.getBoundingClientRect();
   const walk = (el) => {
     if (el.nodeType !== 1) return;

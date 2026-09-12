@@ -8,7 +8,7 @@ import { setSummary, setTonnage, isDurationSet, sessionTonnage } from './model.j
 // The tracked muscle vocabulary, canonical body order. Coverage views show
 // every entry, always: an empty row is data.
 export const MUSCLES = ['chest', 'back', 'traps', 'front delts', 'side delts', 'rear delts',
-  'biceps', 'triceps', 'forearms', 'quads', 'hamstrings', 'glutes', 'calves', 'lower back', 'abs'];
+  'biceps', 'triceps', 'forearms', 'quads', 'hamstrings', 'glutes', 'adductors', 'calves', 'lower back', 'abs'];
 
 // Weekly working-set growth ranges per muscle, from
 // research/intermediate-hypertrophy-integrated-report.md section 7.
@@ -151,44 +151,35 @@ export function muscleMap(profiles) {
 
 const exMuscles = (map, name) => map.get((name || '').trim().toLowerCase()) || { major: [], minor: [] };
 
-// Per muscle: sets per week over the last nWeeks (major movers), plus the days
-// each muscle was trained and its last-worked date.
+// Per muscle, weighted sets per week over the last nWeeks: a set counts 1.0
+// for each major muscle and 0.5 for each minor one, the fractional tally that
+// best predicted growth in Pelland et al. 2025 (research/exercise-muscle-mapping.md,
+// addendum 2026-09-13). Also the days each muscle was trained this week, its
+// last-worked date (major or minor), and the exercise names logged in the
+// window with no muscles mapped.
 export function muscleWeekly(facts, map, nWeeks, now = new Date()) {
   const keys = weekSeq(nWeeks, now);
-  const out = new Map(MUSCLES.map((m) => [m, { series: keys.map(() => 0), daysThisWeek: new Set(), last: null }]));
+  const muscles = new Map(MUSCLES.map((m) => [m, { series: keys.map(() => 0), daysThisWeek: new Set(), last: null }]));
   const idx = new Map(keys.map((k, i) => [k, i]));
   const thisWk = keys[keys.length - 1];
+  const unmapped = new Set();
   for (const f of facts) {
     const i = idx.get(f.week);
     for (const ex of f.exs) {
-      for (const m of exMuscles(map, ex.name).major) {
-        const row = out.get(m);
-        if (!row) continue;
-        if (i != null) row.series[i] += ex.facts.length;
-        if (f.week === thisWk) row.daysThisWeek.add(f.date);
-        if (!row.last || f.date > row.last) row.last = f.date;
+      const mus = exMuscles(map, ex.name);
+      if (!mus.major.length && !mus.minor.length) { if (i != null && ex.facts.length) unmapped.add(ex.name); continue; }
+      for (const [names, w] of [[mus.major, 1], [mus.minor, 0.5]]) {
+        for (const m of names) {
+          const row = muscles.get(m);
+          if (!row) continue;
+          if (i != null) row.series[i] += ex.facts.length * w;
+          if (f.week === thisWk) row.daysThisWeek.add(f.date);
+          if (!row.last || f.date > row.last) row.last = f.date;
+        }
       }
     }
   }
-  return out;
-}
-
-// This week's weighted sets per muscle: major 1.0, minor 0.5, per the
-// hypertrophy report's counting rule. Also reports unmapped exercise names.
-export function weightedWeekSets(facts, map, now = new Date()) {
-  const thisWk = weekSeq(1, now)[0];
-  const acc = new Map(MUSCLES.map((m) => [m, 0]));
-  const unmapped = new Set();
-  for (const f of facts) {
-    if (f.week !== thisWk) continue;
-    for (const ex of f.exs) {
-      const mus = exMuscles(map, ex.name);
-      if (!mus.major.length && !mus.minor.length) { if (ex.facts.length) unmapped.add(ex.name); continue; }
-      for (const m of mus.major) if (acc.has(m)) acc.set(m, acc.get(m) + ex.facts.length);
-      for (const m of mus.minor) if (acc.has(m)) acc.set(m, acc.get(m) + ex.facts.length * 0.5);
-    }
-  }
-  return { acc, unmapped: [...unmapped] };
+  return { muscles, unmapped: [...unmapped] };
 }
 
 // Chronological weight-record moments across all exercises (min prior exposures

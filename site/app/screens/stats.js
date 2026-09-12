@@ -6,7 +6,7 @@ import { h } from '../dom.js';
 import { bottomNav, toast } from '../ui.js';
 import {
   MUSCLES, GROWTH_RANGES, sessionFacts, trainedDays, runHistogram, weeklyAgg,
-  weekKey, weekSeq, daysAgo, muscleMap, muscleWeekly, weightedWeekSets, recordFeed,
+  weekKey, weekSeq, daysAgo, muscleMap, muscleWeekly, recordFeed,
 } from '../rollups.js';
 
 const LAYOUT_KEY = 'atomic-stats-layout';
@@ -183,7 +183,7 @@ const WIDGETS = {
   coverage: {
     name: 'Coverage heat', shelf: 'how much',
     render(d) {
-      const weekly = muscleWeekly(d.facts, d.muscles, 9);
+      const { muscles: weekly } = muscleWeekly(d.facts, d.muscles, 9);
       const shade = (v) => (v === 0 ? '' : v <= 3 ? ' l1' : v <= 8 ? ' l2' : ' l3');
       const rows = MUSCLES.map((m) => {
         const s = weekly.get(m).series;
@@ -192,19 +192,18 @@ const WIDGETS = {
           h('span', { class: 'st-cov-mn' + (empty ? ' amber' : '') }, m),
           ...s.map((v) => h('div', { class: 'st-cov-c' + shade(v) })));
       });
-      return card('Coverage', 'sets per muscle per week · 9 weeks', ...rows,
+      return card('Coverage', 'sets per muscle per week · synergist ½ · 9 weeks', ...rows,
         axis(fmtDate(weekSeq(9)[0]), 'this week'));
     },
   },
   ladder: {
     name: 'Muscle ladder', shelf: 'how much',
     render(d) {
-      const weekly = muscleWeekly(d.facts, d.muscles, 1);
+      const { muscles: weekly, unmapped } = muscleWeekly(d.facts, d.muscles, 1);
       const vals = MUSCLES.map((m) => [m, weekly.get(m).series[0]]);
       vals.sort((a, b) => b[1] - a[1]);
       const max = Math.max(1, ...vals.map((v) => v[1]));
-      const { unmapped } = weightedWeekSets(d.facts, d.muscles);
-      return card('This week', 'sets per muscle',
+      return card('This week', 'sets per muscle · synergist ½',
         ...vals.map(([m, v]) => mbar(cap(m), v, max, { low: v <= 3 })),
         unmapped.length ? note(`No muscles mapped yet: ${unmapped.join(' · ')}.`) : null);
     },
@@ -212,7 +211,7 @@ const WIDGETS = {
   freq: {
     name: 'Times hit per week', shelf: 'how much',
     render(d) {
-      const weekly = muscleWeekly(d.facts, d.muscles, 1);
+      const { muscles: weekly } = muscleWeekly(d.facts, d.muscles, 1);
       const vals = MUSCLES.map((m) => [m, weekly.get(m).daysThisWeek.size]);
       vals.sort((a, b) => b[1] - a[1]);
       return card('Times hit this week', 'tick = 2 per week',
@@ -222,11 +221,11 @@ const WIDGETS = {
   targets: {
     name: 'Sets vs your ranges', shelf: 'how much',
     render(d) {
-      const { acc, unmapped } = weightedWeekSets(d.facts, d.muscles);
+      const { muscles: weekly, unmapped } = muscleWeekly(d.facts, d.muscles, 1);
       const rows = MUSCLES.filter((m) => GROWTH_RANGES[m])
-        .map((m) => ({ m, v: acc.get(m) || 0, r: GROWTH_RANGES[m] }))
+        .map((m) => ({ m, v: weekly.get(m).series[0], r: GROWTH_RANGES[m] }))
         .sort((a, b) => b.v - a.v);
-      return card('This week vs growth zone', 'band = your range',
+      return card('This week vs growth zone', 'band = your range · synergist ½',
         ...rows.map(({ m, v, r }) => mbar(cap(m), v, 20, { band: r, low: v < r[0] })),
         unmapped.length ? note(`Not counted, no muscles mapped: ${unmapped.join(' · ')}.`) : null);
     },
@@ -246,7 +245,7 @@ const WIDGETS = {
   fresh: {
     name: 'Freshness board', shelf: 'bests + state',
     render(d) {
-      const weekly = muscleWeekly(d.facts, d.muscles, 1);
+      const { muscles: weekly } = muscleWeekly(d.facts, d.muscles, 1);
       const rows = MUSCLES
         .map((m) => ({ m, last: weekly.get(m).last }))
         .filter((x) => x.last)

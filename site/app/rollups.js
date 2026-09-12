@@ -154,7 +154,7 @@ const exMuscles = (map, name) => map.get((name || '').trim().toLowerCase()) || {
 // Per muscle, weighted sets per week over the last nWeeks: a set counts 1.0
 // for each major muscle and 0.5 for each minor one, the fractional tally that
 // best predicted growth in Pelland et al. 2025 (research/exercise-muscle-mapping.md,
-// addendum 2026-09-13). Also the days each muscle was trained this week, its
+// addendum 2026-09-12). Also the days each muscle was trained this week, its
 // last-worked date (major or minor), and the exercise names logged in the
 // window with no muscles mapped.
 export function muscleWeekly(facts, map, nWeeks, now = new Date()) {

@@ -321,7 +321,7 @@ export async function renderExerciseProfile(ctx, exName) {
     body.append(muscleInput('Minor', 'minor'));
 
     const note = h('textarea', {
-      class: 'note-input', rows: '2', placeholder: 'Exercise note — setup, seat position, cues...',
+      class: 'note-input', rows: '2', placeholder: 'Exercise notes: setup, seat, what to remember. *Stars* stress a line.',
       onChange: async (e) => { profile.notes = e.target.value; await save(); },
     });
     note.value = profile.notes || '';

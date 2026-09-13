@@ -328,6 +328,7 @@ export async function renderExercise(ctx, sessionId, exerciseId) {
         h('button', { class: 'done-btn', onClick: () => ctx.router.go({ name: 'session', sessionId }) }, 'Done')),
       h('div', { class: 'ex-name' }, ex.display_name),
       specStub(ctx, profile, plan, ex.display_name)),
+    cueCard(ctx, profile, ex.display_name),
     exerciseNote(ctx, doc, ex),
     logPane, histPane, statsPane);
   statsPane.hidden = true;
@@ -338,17 +339,15 @@ export async function renderExercise(ctx, sessionId, exerciseId) {
 }
 
 // The prescription as a ticket stub under the title: the targets you train by
-// (sets×reps, RIR, rest) on the face, and muscles + the standing profile note
-// + the library door behind the perforation. The bucket never shows here —
-// this screen is about today's numbers. Nothing renders without a plan.
+// (sets×reps, RIR, rest) on the face, and muscles + the library door behind
+// the perforation. The bucket never shows here; this screen is about today's
+// numbers. Nothing renders without a plan. The standing note is its own card.
 function specStub(ctx, profile, plan, exName) {
   if (!plan) return null;
   const muscles = profile && profile.muscles
     ? [...(profile.muscles.major || []), ...(profile.muscles.minor || [])] : [];
   const under = h('div', { class: 'stub-under', hidden: true },
     muscles.length ? h('div', { class: 'stub-muscles' }, muscles.join(' · ')) : null,
-    profile && profile.notes && profile.notes.trim()
-      ? h('div', { class: 'stub-note' }, `"${profile.notes.trim()}"`) : null,
     h('div', {
       class: 'stub-link',
       onClick: (e) => { e.stopPropagation(); ctx.router.go({ name: 'exercise-profile', exName }); },
@@ -370,11 +369,34 @@ function specStub(ctx, profile, plan, exName) {
   tear, under);
 }
 
+// The exercise notes (the profile note) as their own card under the stub, read
+// before the first set every time, plan or no plan. Shown as written: links
+// open in a new tab, text between *stars* is stressed, line breaks hold.
+// Tap the card to edit it in the library.
+function cueCard(ctx, profile, exName) {
+  const text = profile && profile.notes ? profile.notes.trim() : '';
+  if (!text) return null;
+  const body = h('div', { class: 'cue-text' });
+  for (const part of text.split(/(https?:\/\/\S+|\*[^*\n]+\*)/g)) {
+    if (!part) continue;
+    if (/^https?:\/\//.test(part)) {
+      body.append(h('a', { class: 'cue-link', href: part, target: '_blank', rel: 'noopener', onClick: (e) => e.stopPropagation() }, part));
+    } else if (/^\*[^*\n]+\*$/.test(part)) {
+      body.append(h('em', {}, part.slice(1, -1)));
+    } else {
+      body.append(part);
+    }
+  }
+  return h('div', { class: 'cue-card', onClick: () => ctx.router.go({ name: 'exercise-profile', exName }) },
+    h('div', { class: 'cue-label' }, 'Exercise notes', h('span', {}, 'Edit in library ›')),
+    body);
+}
+
 // Per-exercise free-text note (WODIS exercise.notes), mirrors the session note.
 function exerciseNote(ctx, doc, ex) {
   let t;
   const ta = h('textarea', {
-    class: 'note-input', rows: '2', placeholder: 'Add a note about this exercise...',
+    class: 'note-input', rows: '2', placeholder: "Add a note about today's exercise...",
     onInput: (e) => {
       ex.notes = e.target.value;
       clearTimeout(t);

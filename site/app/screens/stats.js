@@ -109,26 +109,30 @@ const WIDGETS = {
   yearheat: {
     name: 'Year heat', shelf: 'showing up',
     render(d) {
+      // A rolling year: 52 full weeks plus the current week, today's week the
+      // last column. The card never empties in January.
+      const MO = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const now = new Date();
-      const year = now.getFullYear();
-      const trained = new Set(d.days.filter((x) => x.startsWith(String(year))));
-      const jan1 = new Date(year, 0, 1);
-      const start = new Date(year, 0, 1 - ((jan1.getDay() + 6) % 7));
-      const weeks = Math.ceil(((now - start) / 86400000 + 1) / 7);
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - ((today.getDay() + 6) % 7));
+      const start = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() - 52 * 7);
+      const dayKey = (dd) => `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`;
+      const from = dayKey(start); const to = dayKey(today);
+      const trained = new Set(d.days.filter((x) => x >= from && x <= to));
+      const weeks = 53;
       const cells = []; const labels = [];
       for (let w = 0; w < weeks; w++) {
         let monthAt = '';
         for (let i = 0; i < 7; i++) {
           const dd = new Date(start.getFullYear(), start.getMonth(), start.getDate() + w * 7 + i);
-          if (dd.getDate() === 1) monthAt = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][dd.getMonth()];
-          const key = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`;
-          const off = dd.getFullYear() !== year || dd > now;
-          cells.push(h('div', { class: 'st-ghc' + (off ? ' off' : trained.has(key) ? ' on' : '') }));
+          if (dd.getDate() === 1) monthAt = MO[dd.getMonth()].toUpperCase();
+          const off = dd > today;
+          cells.push(h('div', { class: 'st-ghc' + (off ? ' off' : trained.has(dayKey(dd)) ? ' on' : '') }));
         }
         labels.push(h('div', {}, monthAt));
       }
-      const elapsed = Math.floor((now - jan1) / 86400000) + 1;
-      return card(String(year), 'filled = a session happened',
+      const elapsed = Math.round((today - start) / 86400000) + 1;
+      return card(`${MO[start.getMonth()]} ${start.getFullYear()} to ${MO[today.getMonth()]} ${today.getFullYear()}`, 'filled = a session happened',
         h('div', { class: 'st-gh' },
           h('div', { class: 'st-gh-days' }, h('span', {}, 'M'), h('span'), h('span', {}, 'W'), h('span'), h('span', {}, 'F'), h('span'), h('span')),
           h('div', { class: 'st-gh-scroll' },
@@ -344,6 +348,19 @@ async function shareCard(widgetEl, title) {
     [...el.children].forEach(walk);
   };
   walk(wrap);
+  // The image cannot fetch the web font, so text renders in the system font,
+  // wider than the box the walk just measured for it, and wraps. Text sizes
+  // to itself again, except the columns whose width lines a table up; the
+  // header stays one row.
+  const free = (el, nowrap) => {
+    for (const p of ['width', 'height', 'inline-size', 'block-size']) el.style.setProperty(p, 'auto');
+    if (nowrap) el.style.setProperty('white-space', 'nowrap');
+  };
+  const aligned = '.st-mn, .st-mv, .st-cov-mn, .st-ld, .st-rhy-wk, .st-gap-num';
+  [...head.children].forEach((el) => free(el, true));
+  for (const el of clone.querySelectorAll('*')) {
+    if (!el.childElementCount && el.textContent.trim() && !el.matches(aligned)) free(el, false);
+  }
   document.body.removeChild(wrap);
   wrap.style.position = 'static'; wrap.style.left = 'auto'; wrap.style.top = 'auto';
   const html = new XMLSerializer().serializeToString(wrap);
@@ -402,6 +419,9 @@ export async function renderStats(ctx) {
       h('button', { class: 'st-x', onClick: () => { layout = layout.filter((x) => x !== id); saveLayout(layout); sync(); } }, '✕'),
       h('button', { class: 'st-share', onClick: (e) => { e.stopPropagation(); shareCard(el, fmtDate(new Date().toISOString()).toUpperCase() + ' ' + new Date().getFullYear()).catch(() => toast('Share failed')); } }, '↗'),
       inner);
+    // A sideways-scrolling grid (the year heat) opens on today's week, the
+    // right end, once it is in the document.
+    requestAnimationFrame(() => el.querySelectorAll('.st-gh-scroll').forEach((sc) => { sc.scrollLeft = sc.scrollWidth; }));
     return el;
   }
 

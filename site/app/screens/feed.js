@@ -1,7 +1,8 @@
 // Home feed: recent sessions with live derived stats, and Log New Session.
 import { h } from '../dom.js';
-import { bottomNav, formatLongDate, formatTime, TRASH_ICON, sessionNoLabel } from '../ui.js';
+import { bottomNav, formatLongDate, formatTime, TRASH_ICON, sessionNoLabel, medal, openRecordsSheet } from '../ui.js';
 import { sessionTonnage, sessionSetCount } from '../model.js';
+import { recordMoments } from '../rollups.js';
 
 export async function renderFeed(ctx) {
   const sessions = (await ctx.store.allSessions())
@@ -25,13 +26,15 @@ export async function renderFeed(ctx) {
       h('div', { class: 'empty-sub' }, 'Tap Log New Session to start, or bring your history in.'),
       h('button', { class: 'import-btn', onClick: () => ctx.importCsv() }, 'Import History')));
   } else {
-    sessions.forEach((doc, i) => scroll.append(sessionCard(ctx, doc, sessions.length - i)));
+    // Records are computed over the whole record on every render, never stored.
+    const { bySession } = recordMoments(sessions);
+    sessions.forEach((doc, i) => scroll.append(sessionCard(ctx, doc, sessions.length - i, bySession.get(doc.session.id) || [])));
   }
 
   return h('div', { class: 'screen' }, scroll, bottomNav('feed', ctx));
 }
 
-function sessionCard(ctx, doc, number) {
+function sessionCard(ctx, doc, number, recs) {
   const s = doc.session;
   const label = s.split_type ? `${formatLongDate(s.started_at)} · ${s.split_type}` : formatLongDate(s.started_at);
   // Middot separator: commas now live inside exercise names (movement-first
@@ -49,6 +52,11 @@ function sessionCard(ctx, doc, number) {
     h('div', { class: 'sc-bottom' },
       h('span', { class: 'sc-stat', html: `<strong>${sessionTonnage(doc).toLocaleString()}</strong> ${s.load_unit}` }),
       h('span', { class: 'sc-stat', html: `<strong>${sets}</strong> set${sets !== 1 ? 's' : ''}` }),
+      // The count is a handle, not a statement: tapping it opens the session's records.
+      recs.length ? h('span', {
+        class: 'sc-stat sc-rec', role: 'button', title: 'Records this session',
+        onClick: (e) => { e.stopPropagation(); openRecordsSheet(doc, recs); },
+      }, medal(), h('strong', {}, String(recs.length)), ` record${recs.length !== 1 ? 's' : ''}`) : null,
       h('button', {
         class: 'sc-del', 'aria-label': 'Delete session', title: 'Delete session', html: TRASH_ICON,
         onClick: (e) => { e.stopPropagation(); deleteSessionCard(ctx, doc); },

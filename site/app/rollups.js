@@ -3,7 +3,7 @@
 // rule. Accounting follows decision-rep-accounting.md: failed reps excluded
 // from reps and tonnage, assisted/partial counted at load but disqualifying a
 // set from records, dropset reps counted but marking the set unclean.
-import { setSummary, setTonnage, isDurationSet, sessionTonnage } from './model.js';
+import { setSummary, setTonnage, isDurationSet, setDuration, sessionTonnage } from './model.js';
 
 // The tracked muscle vocabulary, canonical body order. Coverage views show
 // every entry, always: an empty row is data.
@@ -93,10 +93,14 @@ export function sessionFacts(docs) {
       const s = d.session;
       let sets = 0; let reps = 0;
       const exs = s.exercises.map((ex) => {
-        const facts = ex.sets.map(setFacts).filter(Boolean);
+        // Each fact keeps its index among the exercise's sets (`i`) so a
+        // record can name the set it came from; duration sets ride along
+        // as seconds, since setFacts has nothing to say about them.
+        const facts = ex.sets.map((set, i) => { const f = setFacts(set); if (f) f.i = i; return f; }).filter(Boolean);
+        const durations = ex.sets.filter(isDurationSet).map(setDuration);
         sets += facts.length;
         for (const f of facts) reps += f.reps;
-        return { name: ex.display_name, facts };
+        return { name: ex.display_name, facts, durations };
       });
       return {
         id: s.id, date: dayKey(s.started_at), ts: Date.parse(s.started_at),
@@ -243,4 +247,96 @@ export function exerciseStats(facts, name) {
 export function tokenMatch(query, candidate) {
   const c = (candidate || '').toLowerCase();
   return (query || '').toLowerCase().split(/\s+/).filter(Boolean).every((t) => c.includes(t));
+}
+
+// ── Records ─────────────────────────────────────────────────────────────────
+// Lifetime records, six types locked by the owner 2026-10-06 (docs/
+// decision-records.md). A record is computed from the facts, never stored.
+// Rules: strictly greater (a match is not a record); a type needs five prior
+// exposures of its exercise (five prior sessions for session tonnage) before
+// it can fire, so a first log is never a record; reps at top weight counts
+// only against an earlier set at that same weight, clean sets only; within
+// one session a type fires once per exercise, at its best value. The
+// composition (`of`) says what the record is made of, in the lifter's own
+// numbers, so every surface can show it without a definition.
+export const RECORD_MIN_PRIOR = 5;
+export const RECORD_TYPES = ['Rep weight', 'Reps at top weight', 'Set tonnage', 'Exercise tonnage', 'Session tonnage', 'Duration'];
+
+const setLabel = (f) => `${f.mainLoad} × ${f.mainReps}`;
+// "3 sets of 48.5 × 10" when every set matches, else "155 × 8 + 225 × 11".
+function composition(facts) {
+  const labels = facts.map(setLabel);
+  if (labels.length > 1 && labels.every((l) => l === labels[0])) return `${labels.length} sets of ${labels[0]}`;
+  return labels.join(' + ');
+}
+
+export function recordMoments(docs) {
+  const facts = sessionFacts(docs);
+  const bySession = new Map();
+  const byExercise = new Map();
+  const seen = new Map();                                   // exercise -> exposures so far
+  const best = { load: new Map(), repsAt: new Map(), set: new Map(), ex: new Map(), dur: new Map() };
+  let bestSession = null;
+  let sessionsSeen = 0;
+  let total = 0;
+  const key = (n) => (n || '').trim().toLowerCase();
+
+  for (const f of facts) {
+    const recs = [];
+    for (const ex of f.exs) {
+      const k = key(ex.name);
+      const n = seen.get(k) || 0;
+      const may = n >= RECORD_MIN_PRIOR;
+      const cand = {};                                      // type -> best candidate this session
+      const offer = (type, of, value, prev, setIndex) => {
+        if (!cand[type] || value > cand[type].value) {
+          cand[type] = { type, ex: ex.name, exKey: k, of, value, was: prev.v, wasDate: prev.date, date: f.date, sessionId: f.id, setIndex };
+        }
+      };
+      const topNow = Math.max(best.load.has(k) ? best.load.get(k).v : 0, ...ex.facts.map((x) => x.maxLoad));
+      for (const s of ex.facts) {
+        const bl = best.load.get(k);
+        if (may && bl && s.maxLoad > bl.v) offer('Rep weight', setLabel(s), s.maxLoad, bl, s.i);
+        if (s.clean && s.mainLoad > 0 && s.mainLoad === topNow) {
+          const br = best.repsAt.get(`${k}|${s.mainLoad}`);
+          if (may && br && s.mainReps > br.v) offer('Reps at top weight', setLabel(s), s.mainReps, br, s.i);
+        }
+        const bs = best.set.get(k);
+        if (may && bs && s.tonnage > bs.v) offer('Set tonnage', setLabel(s), s.tonnage, bs, s.i);
+      }
+      const et = ex.facts.reduce((t, s) => t + s.tonnage, 0);
+      const be = best.ex.get(k);
+      if (may && be && et > be.v) offer('Exercise tonnage', composition(ex.facts), et, be);
+      const longest = Math.max(0, ...ex.durations);
+      const bd = best.dur.get(k);
+      if (may && bd && longest > bd.v) offer('Duration', '', longest, bd);
+      // Commit this session's bests only after every set was judged against the earlier ones.
+      for (const s of ex.facts) {
+        if (!best.load.has(k) || s.maxLoad > best.load.get(k).v) best.load.set(k, { v: s.maxLoad, date: f.date });
+        if (s.clean && s.mainLoad > 0) {
+          const rk = `${k}|${s.mainLoad}`;
+          if (!best.repsAt.has(rk) || s.mainReps > best.repsAt.get(rk).v) best.repsAt.set(rk, { v: s.mainReps, date: f.date });
+        }
+        if (!best.set.has(k) || s.tonnage > best.set.get(k).v) best.set.set(k, { v: s.tonnage, date: f.date });
+      }
+      if (ex.facts.length && (!best.ex.has(k) || et > best.ex.get(k).v)) best.ex.set(k, { v: et, date: f.date });
+      if (longest > 0 && (!best.dur.has(k) || longest > best.dur.get(k).v)) best.dur.set(k, { v: longest, date: f.date });
+      if (ex.facts.length || ex.durations.length) seen.set(k, n + 1);
+      for (const r of Object.values(cand)) {
+        recs.push(r);
+        if (!byExercise.has(k)) byExercise.set(k, []);
+        byExercise.get(k).push(r);
+      }
+    }
+    if (f.tonnage > 0 && (!bestSession || f.tonnage > bestSession.v)) {
+      if (sessionsSeen >= RECORD_MIN_PRIOR && bestSession) {
+        recs.push({ type: 'Session tonnage', ex: null, exKey: null, of: `${f.sets} sets`, value: f.tonnage, was: bestSession.v, wasDate: bestSession.date, date: f.date, sessionId: f.id });
+      }
+      bestSession = { v: f.tonnage, date: f.date };
+    }
+    sessionsSeen += 1;
+    if (recs.length) bySession.set(f.id, recs);
+    total += recs.length;
+  }
+  return { bySession, byExercise, total };
 }

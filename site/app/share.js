@@ -4,7 +4,8 @@
 // (external stylesheets don't apply inside an <svg><foreignObject>).
 import { h } from './dom.js';
 import { sessionTonnage, sessionSetCount, sessionReps, sessionNumber, setTonnage, exerciseSetSummary } from './model.js';
-import { toast, fmtDuration } from './ui.js';
+import { toast, fmtDuration, MEDAL_ICON, recordValue } from './ui.js';
+import { recordMoments } from './rollups.js';
 
 const X = '×';      // ×
 const DROP = '↳';   // ↳
@@ -50,6 +51,23 @@ const SHARE_CARD_CSS = `
 .shc-failed { color:var(--shc-fail); }
 .shc-empty { font-style:italic; color:var(--shc-mut2); }
 .shc-foot { margin-top:16px; }
+.share-card .medal-svg { width:1em; height:1em; vertical-align:-0.12em; color:var(--shc-volt); }
+.shc-stat-rec .shc-v { color:var(--shc-volt); display:flex; align-items:center; gap:6px; height:1em; }
+.shc-stat-rec .shc-v .medal-svg { width:0.78em; height:0.78em; vertical-align:0; }
+.shc-ex-name .medal-svg { margin-right:5px; }
+.shc-rechead { display:flex; align-items:baseline; margin-top:18px; padding-bottom:8px; border-bottom:1px solid var(--shc-faint);
+  font-family:var(--shc-mono); font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:var(--shc-mut2); }
+.shc-rechead-r { margin-left:auto; letter-spacing:0.13em; }
+.shc-reclist { display:grid; grid-template-columns:minmax(0,1fr); }
+.share-card.dense .shc-reclist { grid-template-columns:minmax(0,1fr) minmax(0,1fr); column-gap:26px; grid-auto-flow:column; }
+.shc-rec { padding:9px 0; border-bottom:1px solid var(--shc-faint2); break-inside:avoid; }
+.shc-rec-ex { font-size:14px; font-weight:600; display:flex; align-items:center; gap:6px; }
+.share-card.dense .shc-rec-ex { font-size:12.5px; }
+.shc-rec-l { font-family:var(--shc-mono); font-size:12px; color:var(--shc-mut); margin-top:4px; line-height:1.55; font-variant-numeric:tabular-nums; }
+.share-card.dense .shc-rec-l { font-size:11px; }
+.shc-rec-l b { color:var(--shc-ink); font-weight:600; }
+.shc-rec-l .v { color:var(--shc-volt); font-weight:600; }
+.shc-rec-l .sep { color:var(--shc-mut2); padding:0 5px; }
 .shc-mark { font-size:12px; font-weight:400; letter-spacing:0.04em; color:var(--shc-mut2); }
 .shc-mark b { color:var(--shc-ink); font-weight:600; }
 `;
@@ -105,15 +123,41 @@ function exSetsHtml(ex) {
 
 // Build the share-card element from a WODIS doc. `number` is the optional
 // session ordinal (e.g. 324) shown as "NO. 0324".
-export function buildShareCard(doc, { number } = {}) {
+// Records on the card: a stat beside the others, a medal on the exercise
+// that took one, and a block under the log grouped by exercise with type and
+// value only (the composition is already in the log; the prior stays off
+// the card, owner's call 2026-10-06).
+function recordsHtml(doc, records) {
+  if (!records.length) return '';
+  const order = doc.session.exercises.map((e) => e.display_name);
+  const groups = new Map();
+  for (const r of records) {
+    const g = r.ex || (doc.session.split_type || 'Session');
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g).push(r);
+  }
+  const sorted = [...groups.entries()].sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
+  const items = sorted.map(([name, list]) => `
+    <div class="shc-rec">
+      <div class="shc-rec-ex">${MEDAL_ICON}${esc(name)}</div>
+      <div class="shc-rec-l">${list.map((r) => `<b>${esc(r.type)}</b> <span class="v">${esc(recordValue(r))}</span>`).join('<span class="sep">·</span>')}</div>
+    </div>`).join('');
+  const dense = doc.session.exercises.length > 6;
+  return `
+    <div class="shc-rechead"><span>Records</span><span class="shc-rechead-r">${records.length} lifetime</span></div>
+    <div class="shc-reclist"${dense ? ` style="grid-template-rows:repeat(${Math.ceil(sorted.length / 2)},auto)"` : ''}>${items}</div>`;
+}
+
+export function buildShareCard(doc, { number, records = [] } = {}) {
   const s = doc.session;
   const unit = s.load_unit;
   const dense = s.exercises.length > 6;
+  const recorded = new Set(records.map((r) => r.ex));
   const rows = s.exercises.map((ex, i) => `
     <div class="shc-ex">
       <div class="shc-ex-top">
         ${dense ? `<span class="shc-ex-no">${i + 1}</span>` : ''}
-        <span class="shc-ex-name">${esc(ex.display_name)}</span>
+        <span class="shc-ex-name">${recorded.has(ex.display_name) ? MEDAL_ICON : ''}${esc(ex.display_name)}</span>
         <span class="shc-ex-vol">${exerciseTonnage(ex).toLocaleString()}</span>
       </div>
       <div class="shc-ex-sets">${exSetsHtml(ex)}</div>
@@ -130,9 +174,11 @@ export function buildShareCard(doc, { number } = {}) {
       <div class="shc-stat"><div class="shc-v shc-accent">${sessionTonnage(doc).toLocaleString()}</div><div class="shc-l">${unit} volume</div></div>
       <div class="shc-stat"><div class="shc-v">${sessionSetCount(doc)}</div><div class="shc-l">sets</div></div>
       <div class="shc-stat"><div class="shc-v">${sessionReps(doc)}</div><div class="shc-l">reps</div></div>
+      ${records.length ? `<div class="shc-stat shc-stat-rec"><div class="shc-v">${MEDAL_ICON}${records.length}</div><div class="shc-l">record${records.length === 1 ? '' : 's'}</div></div>` : ''}
     </div>
     <div class="shc-loghead"><span>Session log</span><span class="shc-loghead-r">Vol · ${unit}</span></div>
     <div class="shc-exlist"${dense ? ` style="grid-template-rows:repeat(${Math.ceil(s.exercises.length / 2)},auto)"` : ''}>${rows}</div>
+    ${recordsHtml(doc, records)}
     <div class="shc-foot"><span class="shc-mark"><b>Atomic</b> Workout Tracker</span></div>`;
   return card;
 }
@@ -150,12 +196,15 @@ function ensureCss() {
 // Show the generated card in an overlay with a Share/Save action.
 export async function openSharePreview(ctx, doc) {
   ensureCss();
-  let number;
+  let number; let records = [];
   try {
-    number = sessionNumber(await ctx.store.allSessions(), doc);
-  } catch (_) { /* ordinal is optional */ }
+    const all = await ctx.store.allSessions();
+    number = sessionNumber(all, doc);
+    const docs = all.some((d) => d.session.id === doc.session.id) ? all.map((d) => (d.session.id === doc.session.id ? doc : d)) : [...all, doc];
+    records = recordMoments(docs).bySession.get(doc.session.id) || [];
+  } catch (_) { /* ordinal and records are optional */ }
 
-  const card = buildShareCard(doc, { number });
+  const card = buildShareCard(doc, { number, records });
   const frame = h('div', { class: 'share-card-frame' }, card);
   const overlay = h('div', { class: 'share-overlay', onClick: (e) => { if (e.target === overlay) close(); } });
   const close = () => { overlay.remove(); document.removeEventListener('keydown', onKey); };

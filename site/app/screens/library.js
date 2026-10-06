@@ -4,10 +4,10 @@
 // per-number overrides, muscles, note. Overriding any number mutes the bucket
 // selector, so a plan that deviates from the system is visibly a deviation.
 import { h } from '../dom.js';
-import { bottomNav, toast, formatLongDate, getSex } from '../ui.js';
+import { bottomNav, toast, formatLongDate, getSex, medal, recordValue } from '../ui.js';
 import { BUCKETS, RIR_CHOICES, normalizeName, resolvePlan, suggestBucket, fmtRest, fmtRir } from '../plan.js';
 import { renameExercise } from '../export.js';
-import { tokenMatch, sessionFacts, exerciseStats, daysAgo, setFacts, bodyweightOn } from '../rollups.js';
+import { tokenMatch, sessionFacts, exerciseStats, daysAgo, setFacts, bodyweightOn, recordMoments, RECORD_TYPES, RECORD_MIN_PRIOR } from '../rollups.js';
 import { liftFor, thresholdsFor, placement, STANDARDS_SOURCE } from '../standards.js';
 
 // Aggregate the record by exercise name: how often, how recently, under what
@@ -454,8 +454,10 @@ async function profileHistory(ctx, exName) {
 
 // Per-exercise stats: the record's answers for this one lift, computed live.
 export async function exerciseStatsBlock(ctx, exName) {
-  const facts = sessionFacts(await ctx.store.allSessions());
+  const docs = await ctx.store.allSessions();
+  const facts = sessionFacts(docs);
   const st = exerciseStats(facts, exName);
+  const moments = recordMoments(docs).byExercise.get((exName || '').trim().toLowerCase()) || [];
   if (!st.exposures.length) return h('div');
   const wrap = h('div', { class: 'content ex-stats' });
   const fmtD = (iso) => {
@@ -469,7 +471,8 @@ export async function exerciseStatsBlock(ctx, exName) {
   wrap.append(h('div', { class: 'ex-facts' },
     h('div', { class: 'ex-fact' }, h('div', { class: 'ex-fv volt' }, String(st.maxLoad)), h('div', { class: 'ex-fl' }, 'Top load')),
     h('div', { class: 'ex-fact' }, h('div', { class: 'ex-fv' }, String(st.exposures.length)), h('div', { class: 'ex-fl' }, 'Exposures')),
-    h('div', { class: 'ex-fact' }, h('div', { class: 'ex-fv' }, ago === 0 ? 'today' : `${ago}d`), h('div', { class: 'ex-fl' }, 'Since last'))));
+    h('div', { class: 'ex-fact' }, h('div', { class: 'ex-fv' }, ago === 0 ? 'today' : `${ago}d`), h('div', { class: 'ex-fl' }, 'Since last')),
+    h('div', { class: 'ex-fact' }, h('div', { class: 'ex-fv volt rec' }, medal(), String(moments.length)), h('div', { class: 'ex-fl' }, 'Records'))));
 
   // Top set per exposure, last 12, as bars.
   const recent = st.exposures.slice(-12);
@@ -483,13 +486,45 @@ export async function exerciseStatsBlock(ctx, exName) {
       }))),
     h('div', { class: 'st-axis' }, h('span', {}, fmtD(recent[0].date)), h('span', {}, `${last.topLoad}×${last.topReps}`))));
 
-  // Records, clean sets only.
-  const topRec = st.repRecords.length ? st.repRecords[st.repRecords.length - 1] : null;
-  wrap.append(h('div', { class: 'st-card' },
-    h('div', { class: 'st-label' }, h('span', {}, 'Records'), h('span', { class: 'st-sub' }, 'clean sets only')),
-    h('div', { class: 'st-lrow' }, h('span', { class: 'st-ln mut' }, 'Heaviest load'), h('span', { class: 'st-lv' }, `${st.maxLoad} lb`), h('span', { class: 'st-ld' }, fmtD(st.maxLoadDate))),
-    st.bestSV.v ? h('div', { class: 'st-lrow' }, h('span', { class: 'st-ln mut' }, 'Best set volume'), h('span', { class: 'st-lv' }, st.bestSV.label), h('span', { class: 'st-ld' }, fmtD(st.bestSV.date))) : null,
-    topRec ? h('div', { class: 'st-lrow' }, h('span', { class: 'st-ln mut' }, `Most reps at ${topRec.load}`), h('span', { class: 'st-lv' }, String(topRec.reps)), h('span', { class: 'st-ld' }, fmtD(topRec.date))) : null));
+  // Records: the standing record of each type (the latest moment of that
+  // type), then the ledger of every moment, newest first, grouped by date.
+  // Session tonnage is the session's, not the exercise's, so it never shows here.
+  const standing = RECORD_TYPES.map((t) => [...moments].reverse().find((r) => r.type === t)).filter(Boolean);
+  const recCard = h('div', { class: 'st-card rec-card' },
+    h('div', { class: 'st-label' }, h('span', {}, 'Records'), h('span', { class: 'st-sub' }, 'standing · lifetime')));
+  if (!standing.length) {
+    recCard.append(h('div', { class: 'st-note' }, st.exposures.length <= RECORD_MIN_PRIOR
+      ? `The first ${RECORD_MIN_PRIOR} exposures set the bar; records count from the ${RECORD_MIN_PRIOR + 1}th. ${st.exposures.length} on record.`
+      : 'No record yet beyond the first five exposures.'));
+  }
+  for (const r of standing) {
+    recCard.append(h('div', { class: 'rs-row' },
+      h('div', { class: 'rs-l' }, h('div', { class: 'rs-name' }, medal(), r.type), r.of ? h('div', { class: 'rs-of' }, r.of) : null),
+      h('div', { class: 'rs-r' }, h('div', { class: 'rs-val' }, recordValue(r)), h('div', { class: 'rs-date' }, fmtD(r.date)))));
+  }
+  wrap.append(recCard);
+
+  if (moments.length) {
+    const byDate = new Map();
+    for (const r of moments) { if (!byDate.has(r.date)) byDate.set(r.date, []); byDate.get(r.date).push(r); }
+    const dates = [...byDate.keys()].sort().reverse();
+    const SHOW = 8;
+    const row = (d) => h('div', { class: 'lg-row' },
+      h('div', { class: 'lg-date' }, fmtD(d)),
+      h('div', { class: 'lg-body' }, ...byDate.get(d)
+        .sort((a, b) => RECORD_TYPES.indexOf(a.type) - RECORD_TYPES.indexOf(b.type))
+        .map((r) => h('div', { class: 'lg-item' }, h('span', { class: 'lg-type' }, r.type), ' ', h('b', {}, recordValue(r)), r.of ? h('span', { class: 'lg-of' }, ` ${r.of}`) : null))));
+    const list = h('div', {}, ...dates.slice(0, SHOW).map(row));
+    const ledger = h('div', { class: 'st-card' },
+      h('div', { class: 'st-label' }, h('span', {}, 'Ledger'), h('span', { class: 'st-sub' }, `${moments.length} record${moments.length === 1 ? '' : 's'} · ${dates.length} date${dates.length === 1 ? '' : 's'}`)),
+      list);
+    if (dates.length > SHOW) {
+      const more = h('button', { class: 'lg-more', onClick: () => { dates.slice(SHOW).forEach((d) => list.append(row(d))); more.remove(); } },
+        `Show all ${dates.length} dates · ${moments.length} records`);
+      ledger.append(more);
+    }
+    wrap.append(ledger);
+  }
 
   // Best clean reps at each load, heaviest 8 slots.
   const slots = st.repRecords.slice(-8);

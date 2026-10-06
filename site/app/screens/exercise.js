@@ -2,12 +2,13 @@
 // drill into a set's per-rep detail, and a History tab showing this exercise
 // across earlier sessions. Timed work (bike, ropes) logs duration sets instead.
 import { h, clear } from '../dom.js';
-import { bottomNav, formatLongDate, fmtDuration } from '../ui.js';
+import { bottomNav, formatLongDate, fmtDuration, medal, recordLine } from '../ui.js';
 import {
   findExercise, addSet, setSummary, exerciseSetSummary,
   isDurationSet, setDuration, addDurationSet, localISO,
 } from '../model.js';
 import { normalizeName, resolvePlan, fmtRest, fmtRir } from '../plan.js';
+import { recordMoments } from '../rollups.js';
 import { exerciseStatsBlock } from './library.js';
 
 export async function renderExercise(ctx, sessionId, exerciseId) {
@@ -15,6 +16,22 @@ export async function renderExercise(ctx, sessionId, exerciseId) {
   const ex = doc && findExercise(doc, exerciseId);
   if (!ex) { ctx.router.go({ name: 'session', sessionId }); return h('div'); }
   const unit = doc.session.load_unit;
+  const allDocs = await ctx.store.allSessions();
+
+  // Records this exercise took today, under the logging and never on a row:
+  // judged over the whole record with the live doc in place of its stored
+  // copy, re-read every time a set lands or changes.
+  const recordsBlock = h('div', { class: 'ex-rec-block' });
+  function refreshRecords() {
+    clear(recordsBlock);
+    const docs = allDocs.some((d) => d.session.id === doc.session.id)
+      ? allDocs.map((d) => (d.session.id === doc.session.id ? doc : d)) : [...allDocs, doc];
+    const recs = (recordMoments(docs).bySession.get(doc.session.id) || []).filter((r) => r.ex === ex.display_name);
+    recordsBlock.hidden = !recs.length;
+    if (!recs.length) return;
+    recordsBlock.append(h('div', { class: 'ex-rec-head' }, medal(), `${recs.length} record${recs.length !== 1 ? 's' : ''} today`));
+    for (const r of recs) recordsBlock.append(recordLine(r, { lead: r.setIndex != null ? `Set ${r.setIndex + 1}` : '' }));
+  }
 
   // Declared plan from the exercise library (null = no bucket set; the
   // suggestion falls back to history-guessing exactly as before).
@@ -225,6 +242,7 @@ export async function renderExercise(ctx, sessionId, exerciseId) {
       }
     }
     updateLogCard();
+    refreshRecords();
   }
 
   const setNumW = h('span', { class: 'set-num' }, '');
@@ -305,7 +323,7 @@ export async function renderExercise(ctx, sessionId, exerciseId) {
   updateSetNums();
   applyMode();
 
-  const logPane = h('div', { class: 'content' }, logNextCard, table, weightRow, durationRow, modeToggle);
+  const logPane = h('div', { class: 'content' }, logNextCard, table, weightRow, durationRow, modeToggle, recordsBlock);
 
   const statsPane = await exerciseStatsBlock(ctx, ex.display_name);
   const tabLogBtn = h('button', { class: 'ex-tab active', onClick: () => switchTab('log') }, 'Log');

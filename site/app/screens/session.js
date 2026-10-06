@@ -2,13 +2,13 @@
 // act: logging is the declaration, and a session closes by going quiet
 // (see isLive in model.js).
 import { h, clear } from '../dom.js';
-import { bottomNav, formatLongDate, formatTime, fmtDuration, TRASH_ICON, sessionNoLabel } from '../ui.js';
+import { bottomNav, formatLongDate, formatTime, fmtDuration, TRASH_ICON, sessionNoLabel, medal, openRecordsSheet, recordLine } from '../ui.js';
 import {
   addExercise, exerciseSetSummary, exerciseCounts,
   sessionTonnage, sessionSetCount, sessionReps, sessionNumber, localISO,
 } from '../model.js';
 import { openSharePreview } from '../share.js';
-import { tokenMatch } from '../rollups.js';
+import { tokenMatch, recordMoments } from '../rollups.js';
 
 const SHARE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"/><path d="M8 8l4-4 4 4"/><path d="M5 13v5a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3v-5"/></svg>';
 
@@ -16,7 +16,11 @@ export async function renderSession(ctx, sessionId) {
   const doc = (await ctx.store.getSession(sessionId)) || (ctx.draftFor && ctx.draftFor(sessionId));
   if (!doc) { ctx.router.go({ name: 'feed' }); return h('div'); }
   const s = doc.session;
-  const num = sessionNumber(await ctx.store.allSessions(), doc);
+  const all = await ctx.store.allSessions();
+  const num = sessionNumber(all, doc);
+  // This session's records, judged with the live doc in place of its stored copy.
+  const docs = all.some((d) => d.session.id === s.id) ? all.map((d) => (d.session.id === s.id ? doc : d)) : [...all, doc];
+  const recs = recordMoments(docs).bySession.get(s.id) || [];
 
   const scroll = h('div', { class: 'screen-scroll' },
     h('div', { class: 'session-header' },
@@ -28,14 +32,14 @@ export async function renderSession(ctx, sessionId) {
             `${sessionNoLabel(num)} · ${formatLongDate(s.started_at)}`)),
         h('div', { class: 'session-header-actions' },
           h('button', { class: 'session-share', 'aria-label': 'Share session', title: 'Share session', html: SHARE_ICON, onClick: () => openSharePreview(ctx, doc) })))),
-    sessionRollup(doc),
+    sessionRollup(doc, recs),
     noteArea(ctx, doc),
   );
 
   if (!s.exercises.length) {
     scroll.append(h('div', { class: 'hint' }, 'No exercises yet. Add one to start logging.'));
   } else {
-    for (const ex of s.exercises) scroll.append(exerciseCard(ctx, doc, ex));
+    for (const ex of s.exercises) scroll.append(exerciseCard(ctx, doc, ex, recs.filter((r) => r.ex === ex.display_name)));
   }
 
   scroll.append(
@@ -46,13 +50,16 @@ export async function renderSession(ctx, sessionId) {
 }
 
 // Running totals for the session, shown at the top. Hidden until something's logged.
-function sessionRollup(doc) {
+function sessionRollup(doc, recs) {
   const sets = sessionSetCount(doc);
   if (!sets) return null;
   return h('div', { class: 'session-rollup' },
     rollupStat(sessionTonnage(doc).toLocaleString(), `${doc.session.load_unit} volume`, true),
     rollupStat(String(sets), sets === 1 ? 'set' : 'sets'),
-    rollupStat(String(sessionReps(doc)), 'reps'));
+    rollupStat(String(sessionReps(doc)), 'reps'),
+    recs.length ? h('div', { class: 'sr-stat sr-rec', role: 'button', title: 'Records this session', onClick: () => openRecordsSheet(doc, recs) },
+      h('div', { class: 'sr-val rec' }, medal(), `${recs.length} ›`),
+      h('div', { class: 'sr-label' }, 'records')) : null);
 }
 
 function rollupStat(value, label, accent) {
@@ -75,7 +82,7 @@ function noteArea(ctx, doc) {
   return h('div', { class: 'note-area' }, ta);
 }
 
-function exerciseCard(ctx, doc, ex) {
+function exerciseCard(ctx, doc, ex, recs = []) {
   const { sets, drops } = exerciseCounts(ex);
   const summary = exerciseSetSummary(ex);
   const summaryEl = h('div', { class: 'ec-sets-summary' });
@@ -122,7 +129,10 @@ function exerciseCard(ctx, doc, ex) {
   },
     h('div', { class: 'ec-body' },
       h('span', { class: 'ec-name' }, ex.display_name),
-      summaryEl),
+      summaryEl,
+      // Records live under the sets, never on one row: a later set that
+      // matches the record is not a record, but the exercise still holds it.
+      ...recs.map((r) => recordLine(r))),
     h('div', { class: 'ec-meta' },
       ex.started_at ? h('span', { class: 'ec-time' }, formatTime(ex.started_at)) : null,
       h('span', { class: 'ec-sets-count' }, countLabel)),

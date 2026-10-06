@@ -8,6 +8,64 @@ export const TRASH_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentC
 
 export function sessionNoLabel(n) { return 'No. ' + String(n).padStart(4, '0'); }
 
+// ── Records ──────────────────────────────────────────────────────────────────
+// The award mark and the one way a record is written anywhere in the app:
+// the medal and the type, then what the record is made of, its value, and
+// the record it beat. Rules and types: rollups.js recordMoments.
+export const MEDAL_ICON = '<svg class="medal-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.3 9.4 3.8 15l2.5-1.1L8 15.7l1.7-1.8 2.5 1.1-1.5-5.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="8" cy="6" r="4.4" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="6" r="1.7" fill="currentColor"/></svg>';
+
+export function medal() { return h('span', { class: 'medal', html: MEDAL_ICON }); }
+
+// A record's value as the lifter reads it: a duration as m:ss, anything else a number.
+export function recordValue(rec, v = rec.value) {
+  return rec.type === 'Duration' ? fmtDuration(v) : Number(v).toLocaleString();
+}
+
+// "Aug 29", with the year only when it is not this year.
+export function fmtShortDate(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
+  if (!m) return '';
+  const y = +m[1];
+  return `${MONTHS[+m[2] - 1]} ${+m[3]}${y !== new Date().getFullYear() ? ` ’${String(y).slice(2)}` : ''}`;
+}
+
+// One record as a two-line block: name, then "lead · of · value · was X".
+export function recordLine(rec, { lead = '', was = true } = {}) {
+  const of = h('div', { class: 'rl-of' });
+  const parts = [lead, rec.of].filter(Boolean);
+  if (parts.length) of.append(parts.join(' · ') + ' · ');
+  of.append(h('b', {}, recordValue(rec)));
+  if (was && rec.was != null) of.append(` · was ${recordValue(rec, rec.was)}`);
+  return h('div', { class: 'rl' }, h('div', { class: 'rl-name' }, medal(), rec.type), of);
+}
+
+// The session's records as a bottom sheet: the handle ("4 records") opens
+// this from the feed card and the session rollup. One row per record with
+// the exercise in the composition line, the value and the prior on the right.
+export function openRecordsSheet(doc, recs) {
+  const s = doc.session;
+  const overlay = h('div', { class: 'rec-overlay', onClick: (e) => { if (e.target === overlay) close(); } });
+  const close = () => { overlay.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  const n = recs.length;
+  const rows = recs.map((r) => h('div', { class: 'rs-row' },
+    h('div', { class: 'rs-l' },
+      h('div', { class: 'rs-name' }, medal(), r.type),
+      h('div', { class: 'rs-of' }, [r.ex || s.split_type || 'Session', r.of].filter(Boolean).join(' · '))),
+    h('div', { class: 'rs-r' },
+      h('div', { class: 'rs-val' }, recordValue(r)),
+      r.was != null ? h('div', { class: 'rs-date' }, `was ${recordValue(r, r.was)} · ${fmtShortDate(r.wasDate)}`) : null)));
+  overlay.append(h('div', { class: 'rec-sheet' },
+    h('div', { class: 'rec-grab' }),
+    h('div', { class: 'rec-sheet-h' },
+      h('span', { class: 't' }, medal(), `${formatLongDate(s.started_at)}${s.split_type ? ' · ' + s.split_type : ''} · ${n} record${n === 1 ? '' : 's'}`),
+      h('button', { class: 'rec-close', onClick: close }, 'Close')),
+    h('div', { class: 'rec-sheet-sub' }, 'Lifetime. A match is not a record.'),
+    h('div', { class: 'rec-sheet-list' }, ...rows)));
+  document.body.appendChild(overlay);
+}
+
 export function bottomNav(active, ctx) {
   const item = (key, icon, label, onClick) =>
     h('div', { class: 'nav-item' + (active === key ? ' active' : ''), onClick: onClick || null },

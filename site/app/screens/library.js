@@ -495,7 +495,7 @@ export async function exerciseStatsBlock(ctx, exName) {
   if (!standing.length) {
     recCard.append(h('div', { class: 'st-note' }, st.exposures.length <= RECORD_MIN_PRIOR
       ? `The first ${RECORD_MIN_PRIOR} exposures set the bar; records count from the ${RECORD_MIN_PRIOR + 1}th. ${st.exposures.length} on record.`
-      : 'No record yet beyond the first five exposures.'));
+      : 'No record yet beyond the first two exposures.'));
   }
   for (const r of standing) {
     recCard.append(h('div', { class: 'rs-row' },

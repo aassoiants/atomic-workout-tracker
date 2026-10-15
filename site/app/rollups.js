@@ -252,14 +252,17 @@ export function tokenMatch(query, candidate) {
 // ── Records ─────────────────────────────────────────────────────────────────
 // Lifetime records, six types locked by the owner 2026-10-06 (docs/
 // decision-records.md). A record is computed from the facts, never stored.
-// Rules: strictly greater (a match is not a record); a type needs five prior
-// exposures of its exercise (five prior sessions for session tonnage) before
+// Rules: strictly greater (a match is not a record); a type needs two prior
+// exposures of its exercise (two prior sessions for session tonnage; five until
+// 2026-10-14, a floor inherited from the Stats widget, lowered because a lift
+// beating its own two earlier sessions is a real event and strictly greater
+// already filters the noise) before
 // it can fire, so a first log is never a record; reps at top weight counts
 // only against an earlier set at that same weight, clean sets only; within
 // one session a type fires once per exercise, at its best value. The
 // composition (`of`) says what the record is made of, in the lifter's own
 // numbers, so every surface can show it without a definition.
-export const RECORD_MIN_PRIOR = 5;
+export const RECORD_MIN_PRIOR = 2;
 export const RECORD_TYPES = ['Rep weight', 'Reps at top weight', 'Set tonnage', 'Exercise tonnage', 'Session tonnage', 'Duration'];
 
 const setLabel = (f) => `${f.mainLoad} × ${f.mainReps}`;

@@ -21,6 +21,7 @@ let draft = null; // a new session held in memory; persisted only once it has co
 const router = {
   go(next) {
     const same = JSON.stringify(next) === JSON.stringify(route);
+    if (next.name === 'session' && route.name === 'feed') opened = next.sessionId;
     route = next;
     if (!same) history.pushState(route, '', '');
     render();
@@ -29,6 +30,30 @@ const router = {
 window.addEventListener('popstate', (e) => {
   route = e.state || { name: 'feed' };
   render();
+  leaveQuietSession();
+});
+
+// A screen left open on a session that has since gone quiet looks like today's
+// session, and logging into it files today's sets under yesterday (it happened
+// 2026-10-14: seven bench sets under the Oct 13 card). The app never persists a
+// route, but a PWA that is never closed keeps yesterday's screens alive, in
+// view and in the back stack. So: on return to the foreground, and when a back
+// gesture lands there, a quiet session's screens give way to the feed. A
+// session reopened from the feed on purpose stays open until the app leaves
+// the foreground; reopening is one tap away either way.
+let opened = null;
+async function leaveQuietSession() {
+  if (!['session', 'exercise', 'detail'].includes(route.name)) return;
+  if (route.sessionId === opened) return;
+  const doc = (await store.getSession(route.sessionId)) || ctx.draftFor(route.sessionId);
+  if (doc && isLive(doc)) return;
+  route = { name: 'feed' };
+  history.replaceState(route, '', '');
+  render();
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') opened = null;
+  else leaveQuietSession();
 });
 
 const ctx = {
@@ -40,6 +65,7 @@ const ctx = {
   // so backing out doesn't litter the feed with empty sessions.
   async newSession() {
     draft = createSession();
+    opened = draft.session.id;
     router.go({ name: 'session', sessionId: draft.session.id });
   },
   // The unsaved draft, looked up by id when the store doesn't have it yet.

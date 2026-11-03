@@ -50,8 +50,9 @@ function sessionCard(ctx, doc, number, recs) {
         h('span', { class: 'sc-duration' }, formatTime(s.started_at)))),
     h('div', { class: 'sc-exercises' }, names),
     h('div', { class: 'sc-bottom' },
-      h('span', { class: 'sc-stat', html: `<strong>${sessionTonnage(doc).toLocaleString()}</strong> ${s.load_unit}` }),
-      h('span', { class: 'sc-stat', html: `<strong>${sets}</strong> set${sets !== 1 ? 's' : ''}` }),
+      // Child nodes, not markup: load_unit arrives from imported files.
+      h('span', { class: 'sc-stat' }, h('strong', {}, sessionTonnage(doc).toLocaleString()), ` ${s.load_unit}`),
+      h('span', { class: 'sc-stat' }, h('strong', {}, String(sets)), ` set${sets !== 1 ? 's' : ''}`),
       // The count is a handle, not a statement: tapping it opens the session's records.
       recs.length ? h('span', {
         class: 'sc-stat sc-rec', role: 'button', title: 'Records this session',

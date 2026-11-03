@@ -96,6 +96,7 @@ const ctx = {
             if (plans) parts.push(`${plans} exercise plan${plans !== 1 ? 's' : ''}`);
             if (res.bodyweightsAdded) parts.push(`${res.bodyweightsAdded} weigh-in${res.bodyweightsAdded !== 1 ? 's' : ''}`);
             if (res.removed) parts.push(`${res.removed} deleted elsewhere`);
+            if (res.invalid) parts.push(`${res.invalid} unreadable skipped`);
             toast(parts.length ? `Restored ${parts.join(' · ')}` : 'Already up to date');
           }
           return;

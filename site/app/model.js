@@ -258,6 +258,6 @@ export function toWODIS(doc) {
 }
 
 export function fromWODIS(parsed) {
-  if (!parsed.session.id) parsed.session.id = uid();
+  if (!parsed.session.id) parsed.session.id = newId();
   return parsed;
 }

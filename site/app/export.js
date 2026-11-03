@@ -3,7 +3,7 @@
 // (download on desktop); restore reads that file back in, skipping sessions
 // already present. The file is a JSON array of WODIS documents — the spec
 // defines a document as one session, the array is just the carton.
-import { toWODIS, fromWODIS, localISO } from './model.js';
+import { toWODIS, fromWODIS, localISO, DEFAULT_LOAD_UNIT } from './model.js';
 import { toast } from './ui.js';
 import { normalizeName } from './plan.js';
 
@@ -96,9 +96,30 @@ export async function restoreWodis(store, text) {
       profilesUpdated: p.profilesUpdated,
       bodyweightsAdded: b.added,
       skipped: s.skipped + p.skipped,
+      invalid: s.invalid,
     };
   }
   return restoreSessions(store, Array.isArray(parsed) ? parsed : [parsed]);
+}
+
+const LOAD_UNITS = ['lbs', 'kg'];
+
+// A session document from a file is written only once its shape checks out:
+// an id that is a string (or absent, fromWODIS assigns one), a start that
+// parses as a date, exercises as an array with a string name and a sets
+// array on each, and a load unit from the whitelist (absent falls back to
+// the app default). Anything else is counted as invalid and left out.
+function validSessionDoc(raw) {
+  const s = raw && raw.session;
+  if (!s || typeof s !== 'object') return false;
+  if (s.id != null && typeof s.id !== 'string') return false;
+  if (typeof s.started_at !== 'string' || Number.isNaN(Date.parse(s.started_at))) return false;
+  if (!Array.isArray(s.exercises)) return false;
+  for (const ex of s.exercises) {
+    if (!ex || typeof ex.display_name !== 'string' || !Array.isArray(ex.sets)) return false;
+  }
+  if (s.load_unit == null) s.load_unit = DEFAULT_LOAD_UNIT;
+  return LOAD_UNITS.includes(s.load_unit);
 }
 
 async function restoreSessions(store, docs) {
@@ -106,8 +127,9 @@ async function restoreSessions(store, docs) {
   const gone = new Set((await store.allDeleted()).map((t) => t.id));
   let added = 0;
   let skipped = 0;
+  let invalid = 0;
   for (const raw of docs) {
-    if (!raw || !raw.session || !Array.isArray(raw.session.exercises)) { skipped += 1; continue; }
+    if (!validSessionDoc(raw)) { invalid += 1; continue; }
     const doc = fromWODIS(raw);
     if (have.has(doc.session.id)) continue;
     // Deleted here already: an older copy of the file still carrying it is not
@@ -117,7 +139,7 @@ async function restoreSessions(store, docs) {
     have.add(doc.session.id);
     added += 1;
   }
-  return { added, skipped };
+  return { added, skipped, invalid };
 }
 
 // Deletions made anywhere apply everywhere: record the tombstone, and remove

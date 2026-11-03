@@ -1,4 +1,5 @@
 // Tiny DOM helper so vanilla rendering stays readable. No framework.
+// `html:` is for constant markup only (icons, entities); data goes in as children.
 export function h(tag, props = {}, ...children) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(props || {})) {
